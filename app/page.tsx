@@ -11,7 +11,12 @@ type Message = {
   mine?: boolean;
 };
 
-const channels = ["welcome", "общий", "идеи", "музыка", "игры"];
+const servers = [
+  { id: "bosus", short: "B", name: "Bosus", subtitle: "Клуб создателей", tone: "brand", channels: ["welcome", "общий", "идеи", "музыка", "игры"] },
+  { id: "club", short: "КЛ", name: "Клуб", subtitle: "Друзья и общение", tone: "violet", channels: ["общий", "новости", "фото", "мемы"] },
+  { id: "games", short: "ИГ", name: "Игровая", subtitle: "Играем вместе", tone: "coral", channels: ["лобби", "поиск-группы", "клипы", "оффтоп"] },
+  { id: "music", short: "МУ", name: "Музыка", subtitle: "Слушаем и делимся", tone: "blue", channels: ["чат", "новинки", "плейлисты", "концерты"] },
+] as const;
 
 const initialMessages: Message[] = [
   { id: 1, author: "Bosus Bot", avatar: "B", time: "сегодня, 18:04", text: "Добро пожаловать в Bosus! Это наше новое место для общения." },
@@ -25,11 +30,20 @@ const members = [
 ];
 
 export default function Home() {
+  const [serverId, setServerId] = useState("bosus");
   const [channel, setChannel] = useState("общий");
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
   const [mobilePanel, setMobilePanel] = useState<"channels" | "members" | null>(null);
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
+  const currentServer = servers.find((server) => server.id === serverId) ?? servers[0];
+
+  function switchServer(id: string) {
+    const nextServer = servers.find((server) => server.id === id) ?? servers[0];
+    setServerId(nextServer.id);
+    setChannel(nextServer.channels[0]);
+    setMobilePanel(null);
+  }
 
   function sendMessage(event: FormEvent) {
     event.preventDefault();
@@ -42,20 +56,26 @@ export default function Home() {
   return (
     <main className="app-shell">
       <nav className="server-rail" aria-label="Серверы">
-        <button className="brand-mark active" aria-label="Bosus">B</button>
-        <span className="rail-divider" />
-        <button className="server-icon violet">КЛ</button>
-        <button className="server-icon coral">ИГ</button>
-        <button className="server-icon blue">МУ</button>
+        {servers.map((server, index) => (
+          <div className="server-slot" key={server.id}>
+            {index === 1 && <span className="rail-divider" />}
+            <button
+              onClick={() => switchServer(server.id)}
+              className={`${server.tone === "brand" ? "brand-mark" : `server-icon ${server.tone}`} ${serverId === server.id ? "active" : ""}`}
+              aria-label={`Сервер ${server.name}`}
+              aria-pressed={serverId === server.id}
+            >{server.short}</button>
+          </div>
+        ))}
         <button className="server-icon add" aria-label="Добавить сервер">+</button>
       </nav>
 
       <aside className={`channel-panel ${mobilePanel === "channels" ? "mobile-open" : ""}`}>
-        <div className="workspace-title"><span><b>Bosus</b><small>Клуб создателей</small></span><button>⌤</button></div>
+        <div className="workspace-title"><span><b>{currentServer.name}</b><small>{currentServer.subtitle}</small></span><button>⌤</button></div>
         <div className="channel-scroll">
           <button className="event-card"><span>✦</span><div><b>Новое событие</b><small>Создать встречу</small></div></button>
           <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span><button>+</button></div>
-          {channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}{item === "общий" && <em>3</em>}</button>)}
+          {currentServer.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}{item === "общий" && <em>3</em>}</button>)}
           <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span><button>+</button></div>
           <button className="channel"><span>♫</span>Лобби</button>
           <button className="channel"><span>♫</span>Комната отдыха</button>

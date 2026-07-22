@@ -7,7 +7,9 @@ button, input { font:inherit; }
 button { color:inherit; }
 .app-shell { height:100dvh; display:grid; grid-template-columns:72px 258px minmax(360px,1fr) 238px; background:var(--chat); overflow:hidden; }
 .server-rail { background:#111216; display:flex; flex-direction:column; align-items:center; gap:10px; padding:12px 0; z-index:5; }
+.server-slot{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}.server-slot:has(.active):before{content:"";position:absolute;left:-13px;top:8px;width:4px;height:30px;border-radius:0 4px 4px 0;background:#fff}
 .brand-mark,.server-icon { width:46px; height:46px; border:0; border-radius:16px; background:#292a32; font-weight:800; cursor:pointer; transition:.18s ease; }
+.brand-mark.active,.server-icon.active{border-radius:12px;box-shadow:0 0 0 2px #ffffff18}
 .brand-mark { background:linear-gradient(145deg,#9688ff,#6958df); font-size:22px; box-shadow:0 8px 24px #6d5ce841; }
 .brand-mark:hover,.server-icon:hover { border-radius:12px; transform:translateY(-1px); }
 .server-icon { font-size:13px; letter-spacing:.04em; }.server-icon.violet{background:#403566}.server-icon.coral{background:#6b393f}.server-icon.blue{background:#2f506d}.server-icon.add{color:#72dfb1;font-size:26px;background:#25272d}.server-icon.add:hover{background:#32a875;color:white}
