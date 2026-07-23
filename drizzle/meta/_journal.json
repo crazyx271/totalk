@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784792060601,
+      "tag": "0000_clammy_jack_power",
+      "breakpoints": true
+    }
+  ]
 }
