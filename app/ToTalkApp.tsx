@@ -16,14 +16,14 @@ type Message = {
 };
 
 const servers = [
-  { id: "bosus", short: "B", name: "Bosus", subtitle: "Клуб создателей", tone: "brand", channels: ["welcome", "общий", "идеи", "музыка", "игры"] },
+  { id: "totalk", short: "T", name: "ToTalk", subtitle: "Клуб создателей", tone: "brand", channels: ["welcome", "общий", "идеи", "музыка", "игры"] },
   { id: "club", short: "КЛ", name: "Клуб", subtitle: "Друзья и общение", tone: "violet", channels: ["общий", "новости", "фото", "мемы"] },
   { id: "games", short: "ИГ", name: "Игровая", subtitle: "Играем вместе", tone: "coral", channels: ["лобби", "поиск-группы", "клипы", "оффтоп"] },
   { id: "music", short: "МУ", name: "Музыка", subtitle: "Слушаем и делимся", tone: "blue", channels: ["чат", "новинки", "плейлисты", "концерты"] },
 ] as const;
 
 const initialMessages: Message[] = [
-  { id: 1, author: "Bosus Bot", avatar: "B", time: "сегодня, 18:04", text: "Добро пожаловать в Bosus! Это наше новое место для общения." },
+  { id: 1, author: "ToTalk Bot", avatar: "T", time: "сегодня, 18:04", text: "Добро пожаловать в ToTalk! Это наше новое место для общения." },
   { id: 2, author: "Алёна", avatar: "А", time: "18:07", text: "Всем привет! Кто уже успел посмотреть новые каналы?" },
   { id: 3, author: "Макс", avatar: "М", time: "18:08", text: "Да! Интерфейс отлично смотрится и на телефоне 👌" },
   { id: 4, author: "Алёна", avatar: "А", time: "18:09", text: "Давайте вечером созвонимся в голосовом?" },
@@ -33,7 +33,7 @@ const members = [
   ["А", "Алёна", "В сети"], ["М", "Макс", "Играет"], ["Д", "Данил", "В сети"], ["Л", "Лера", "На телефоне"],
 ];
 
-type BosusAppProps = {
+type ToTalkAppProps = {
   user: {
     id: number;
     displayName: string;
@@ -42,9 +42,9 @@ type BosusAppProps = {
   onLogout: () => Promise<void>;
 };
 
-export default function BosusApp({ user, onLogout }: BosusAppProps) {
+export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   const [homeMode, setHomeMode] = useState(true);
-  const [serverId, setServerId] = useState("bosus");
+  const [serverId, setServerId] = useState("totalk");
   const [channel, setChannel] = useState("общий");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");

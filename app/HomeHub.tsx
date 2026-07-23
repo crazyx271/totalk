@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import type { BosusUser } from "./page";
+import type { ToTalkUser } from "./page";
 import { useVoiceChat } from "./useVoiceChat";
 
 type Friend = {
@@ -45,7 +45,7 @@ export default function HomeHub({
   onOpenServer,
   onLogout,
 }: {
-  user: BosusUser;
+  user: ToTalkUser;
   onOpenServer: (id: string) => void;
   onLogout: () => Promise<void>;
 }) {
@@ -196,9 +196,9 @@ export default function HomeHub({
   return (
     <main className="app-shell home-shell">
       <nav className="server-rail" aria-label="Навигация">
-        <button className="brand-mark active" aria-label="Главная">B</button>
+        <button className="brand-mark active" aria-label="Главная">T</button>
         <span className="rail-divider" />
-        <button className="server-icon violet" onClick={() => onOpenServer("bosus")} aria-label="Открыть сервер Bosus">S</button>
+        <button className="server-icon violet" onClick={() => onOpenServer("totalk")} aria-label="Открыть сервер ToTalk">S</button>
         <button className="server-icon coral" onClick={() => onOpenServer("club")} aria-label="Открыть сервер Клуб">К</button>
         <button className="server-icon blue" onClick={() => onOpenServer("games")} aria-label="Открыть игровой сервер">И</button>
       </nav>
@@ -255,8 +255,8 @@ export default function HomeHub({
             </header>
             <div className="welcome-body">
               <section className="welcome-hero">
-                <div><small>ДОБРО ПОЖАЛОВАТЬ В BOSUS</small><h1>Привет, {user.displayName}!</h1><p>Общайтесь с друзьями, пишите лично и созванивайтесь в один клик.</p></div>
-                <span className="welcome-orbit"><i>B</i></span>
+                <div><small>ДОБРО ПОЖАЛОВАТЬ В TOTALK</small><h1>Привет, {user.displayName}!</h1><p>Общайтесь с друзьями, пишите лично и созванивайтесь в один клик.</p></div>
+                <span className="welcome-orbit"><i>T</i></span>
               </section>
 
               {section === "friends" && <section className="friends-section"><h2>Все друзья — {social.friends.length}</h2>

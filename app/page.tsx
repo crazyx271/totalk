@@ -1,16 +1,16 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import BosusApp from "./BosusApp";
+import ToTalkApp from "./ToTalkApp";
 
-export type BosusUser = {
+export type ToTalkUser = {
   id: number;
   username: string;
   displayName: string;
 };
 
 export default function Home() {
-  const [user, setUser] = useState<BosusUser | null>(null);
+  const [user, setUser] = useState<ToTalkUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
@@ -20,7 +20,7 @@ export default function Home() {
     fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
         if (response.ok) {
-          const data = await response.json() as { user: BosusUser };
+          const data = await response.json() as { user: ToTalkUser };
           setUser(data.user);
         }
       })
@@ -45,9 +45,9 @@ export default function Home() {
         body: JSON.stringify(payload),
       });
       const raw = await response.text();
-      let data: { user?: BosusUser; error?: string };
+      let data: { user?: ToTalkUser; error?: string };
       try {
-        data = JSON.parse(raw) as { user?: BosusUser; error?: string };
+        data = JSON.parse(raw) as { user?: ToTalkUser; error?: string };
       } catch {
         throw new Error("Сервер авторизации временно недоступен");
       }
@@ -67,19 +67,19 @@ export default function Home() {
   }
 
   if (loading) {
-    return <main className="auth-shell"><div className="auth-loading"><span>B</span><p>Bosus запускается…</p></div></main>;
+    return <main className="auth-shell"><div className="auth-loading"><span>T</span><p>ToTalk запускается…</p></div></main>;
   }
 
   if (!user) {
     return (
       <main className="auth-shell">
         <section className="auth-card">
-          <div className="auth-brand"><span>B</span><div><b>Bosus</b><small>Общение без границ</small></div></div>
+          <div className="auth-brand"><span>T</span><div><b>ToTalk</b><small>Общение без границ</small></div></div>
           <h1>{mode === "login" ? "С возвращением" : "Создайте аккаунт"}</h1>
           <p>{mode === "login" ? "Войдите, чтобы продолжить общение." : "Один аккаунт для браузера, ПК и телефона."}</p>
           <form onSubmit={authenticate}>
             {mode === "register" && <label>Отображаемое имя<input name="displayName" minLength={2} maxLength={32} required autoComplete="name" placeholder="Как вас называть?" /></label>}
-            <label>Логин<input name="username" minLength={3} maxLength={24} required autoComplete="username" placeholder="например, bosus_user" /></label>
+            <label>Логин<input name="username" minLength={3} maxLength={24} required autoComplete="username" placeholder="например, totalk_user" /></label>
             <label>Пароль<input name="password" type="password" minLength={8} maxLength={128} required autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="Минимум 8 символов" /></label>
             {error && <div className="auth-error" role="alert">{error}</div>}
             <button className="auth-submit" disabled={submitting}>{submitting ? "Подождите…" : mode === "login" ? "Войти" : "Зарегистрироваться"}</button>
@@ -92,5 +92,5 @@ export default function Home() {
     );
   }
 
-  return <BosusApp user={user} onLogout={logout} />;
+  return <ToTalkApp user={user} onLogout={logout} />;
 }

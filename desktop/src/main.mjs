@@ -3,16 +3,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BOSUS_URL = "https://bosus-chat.guihui103.chatgpt.site/";
-const BOSUS_ORIGIN = new URL(BOSUS_URL).origin;
+const TOTALK_URL = "https://bosus-chat.guihui103.chatgpt.site/";
+const TOTALK_ORIGIN = new URL(TOTALK_URL).origin;
 
-app.setName("Bosus");
-app.setAppUserModelId("com.bosus.desktop");
+app.setName("ToTalk");
+app.setAppUserModelId("com.totalk.desktop");
 
 function createMenu() {
   const template = [
     {
-      label: "Bosus",
+      label: "ToTalk",
       submenu: [
         { label: "Перезагрузить", role: "reload" },
         { type: "separator" },
@@ -44,7 +44,7 @@ function createMenu() {
 
 function createWindow() {
   const window = new BrowserWindow({
-    title: "Bosus",
+    title: "ToTalk",
     width: 1320,
     height: 820,
     minWidth: 780,
@@ -65,7 +65,7 @@ function createWindow() {
   window.once("ready-to-show", () => window.show());
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (new URL(url).origin === BOSUS_ORIGIN) {
+    if (new URL(url).origin === TOTALK_ORIGIN) {
       window.loadURL(url);
     } else {
       void shell.openExternal(url);
@@ -74,7 +74,7 @@ function createWindow() {
   });
 
   window.webContents.on("will-navigate", (event, url) => {
-    if (new URL(url).origin !== BOSUS_ORIGIN) {
+    if (new URL(url).origin !== TOTALK_ORIGIN) {
       event.preventDefault();
       void shell.openExternal(url);
     }
@@ -86,16 +86,16 @@ function createWindow() {
     }
   });
 
-  void window.loadURL(BOSUS_URL);
+  void window.loadURL(TOTALK_URL);
   return window;
 }
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    return permission === "media" && new URL(requestingOrigin).origin === BOSUS_ORIGIN;
+    return permission === "media" && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
   });
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    const sameOrigin = webContents.getURL().startsWith(BOSUS_ORIGIN);
+    const sameOrigin = webContents.getURL().startsWith(TOTALK_ORIGIN);
     const audioOnly = !details.mediaTypes || details.mediaTypes.every((type) => type === "audio");
     callback(permission === "media" && sameOrigin && audioOnly);
   });

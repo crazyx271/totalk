@@ -1,6 +1,6 @@
-# Bosus Desktop
+# ToTalk Desktop
 
-Desktop-клиент Bosus на Electron. Он открывает общую production-версию Bosus,
+Desktop-клиент ToTalk на Electron. Он открывает общую production-версию ToTalk,
 поэтому аккаунты, серверы, каналы и сообщения синхронизируются с браузером.
 
 ## Разработка

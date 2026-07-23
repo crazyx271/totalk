@@ -6,12 +6,12 @@ const geist = Geist({ variable: "--font-geist", subsets: ["latin", "cyrillic"] }
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
-  title: "Bosus — общение без границ",
-  description: "Кроссплатформенное приложение для чатов, сообществ и звонков.",
+  title: "ToTalk — общение без границ",
+  description: "ToTalk — кроссплатформенное приложение для чатов, друзей, сообществ и звонков.",
   openGraph: {
-    title: "Bosus",
+    title: "ToTalk",
     description: "Общение без границ",
-    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "Bosus — общение без границ" }],
+    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "ToTalk — общение без границ" }],
   },
   twitter: { card: "summary_large_image", images: ["/og.png"] },
 };

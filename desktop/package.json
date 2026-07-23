@@ -1,7 +1,7 @@
 {
-  "name": "bosus-desktop",
+  "name": "totalk-desktop",
   "version": "0.1.0",
-  "description": "Bosus desktop client for Windows and macOS",
+  "description": "ToTalk desktop client for Windows and macOS",
   "type": "module",
   "main": "src/main.mjs",
   "private": true,
@@ -15,9 +15,9 @@
     "electron-builder": "26.15.3"
   },
   "build": {
-    "appId": "com.bosus.desktop",
-    "productName": "Bosus",
-    "artifactName": "Bosus-${version}-${os}-${arch}.${ext}",
+    "appId": "com.totalk.desktop",
+    "productName": "ToTalk",
+    "artifactName": "ToTalk-${version}-${os}-${arch}.${ext}",
     "asar": true,
     "files": [
       "src/**/*",
@@ -42,7 +42,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Bosus"
+      "shortcutName": "ToTalk"
     },
     "mac": {
       "target": [
@@ -55,7 +55,7 @@
       "icon": "assets/icon.png",
       "hardenedRuntime": true,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Bosus использует микрофон для голосовых каналов."
+        "NSMicrophoneUsageDescription": "ToTalk использует микрофон для голосовых каналов."
       }
     }
   }

@@ -2,7 +2,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { getDb } from "../db";
 import { sessions, users } from "../db/schema";
 
-const SESSION_COOKIE = "bosus_session";
+const SESSION_COOKIE = "totalk_session";
 const SESSION_DAYS = 30;
 const encoder = new TextEncoder();
 
