@@ -16,7 +16,13 @@ export type VoiceParticipant = {
   username: string;
 };
 
-const ICE_SERVERS: RTCConfiguration = {
+type IceServerConfig = {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+};
+
+const DEFAULT_ICE_SERVERS: RTCConfiguration = {
   iceServers: [{
     urls: [
       "stun:stun.cloudflare.com:3478",
@@ -42,6 +48,22 @@ export function useVoiceChat(serverId: string) {
   const pollingRef = useRef(false);
   const lastSignalRef = useRef(0);
   const serverRef = useRef(serverId);
+  const iceConfigRef = useRef<RTCConfiguration>(DEFAULT_ICE_SERVERS);
+
+  const loadIceConfig = useCallback(async () => {
+    try {
+      const response = await fetch("/api/voice/ice", { cache: "no-store" });
+      if (!response.ok) throw new Error("ice config unavailable");
+      const data = await response.json() as { iceServers?: IceServerConfig[] };
+      if (Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+        iceConfigRef.current = { iceServers: data.iceServers };
+        return;
+      }
+    } catch {
+      // Fall back to STUN-only config when TURN is not configured yet.
+    }
+    iceConfigRef.current = DEFAULT_ICE_SERVERS;
+  }, []);
 
   const postVoice = useCallback(async (payload: Record<string, unknown>) => {
     const response = await fetch("/api/voice", {
@@ -76,7 +98,7 @@ export function useVoiceChat(serverId: string) {
     const existing = connectionsRef.current.get(remotePeerId);
     if (existing) return existing;
 
-    const connection = new RTCPeerConnection(ICE_SERVERS);
+    const connection = new RTCPeerConnection(iceConfigRef.current);
     connectionsRef.current.set(remotePeerId, connection);
     streamRef.current?.getTracks().forEach((track) => connection.addTrack(track, streamRef.current!));
 
@@ -91,6 +113,8 @@ export function useVoiceChat(serverId: string) {
       if (!audio) {
         audio = new Audio();
         audio.autoplay = true;
+        audio.preload = "auto";
+        audio.setAttribute("playsinline", "true");
         audioRef.current.set(remotePeerId, audio);
       }
       audio.srcObject = stream;
@@ -236,6 +260,7 @@ export function useVoiceChat(serverId: string) {
     setStatus("joining");
     setError("");
     try {
+      await loadIceConfig();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
@@ -261,7 +286,7 @@ export function useVoiceChat(serverId: string) {
       setStatus("error");
       setError("Не удалось получить доступ к микрофону");
     }
-  }, [leave, poll, postVoice, serverId, status]);
+  }, [leave, loadIceConfig, poll, postVoice, serverId, status]);
 
   const toggleMute = useCallback(() => {
     const next = !muted;

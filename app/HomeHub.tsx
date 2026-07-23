@@ -46,7 +46,7 @@ export default function HomeHub({
   onLogout,
 }: {
   user: ToTalkUser;
-  onOpenServer: (id: string) => void;
+  onOpenServer: () => void;
   onLogout: () => Promise<void>;
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
@@ -59,6 +59,8 @@ export default function HomeHub({
   const [incomingCall, setIncomingCall] = useState<DirectCall | null>(null);
   const [activeCall, setActiveCall] = useState<DirectCall | null>(null);
   const voice = useVoiceChat("dm");
+  const leaveVoice = voice.leave;
+  const voiceRoom = voice.room;
   const time = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
 
   const loadSocial = useCallback(async (query = "") => {
@@ -91,27 +93,36 @@ export default function HomeHub({
     setActiveCall((current) => {
       if (!current) return null;
       const updated = data.calls.find((call) => call.id === current.id) ?? null;
-      if (!updated && voice.room) void voice.leave();
+      if (!updated && voiceRoom) void leaveVoice();
       return updated;
     });
-  }, [voice.leave, voice.room]);
+  }, [leaveVoice, voiceRoom]);
 
   useEffect(() => {
-    void loadSocial();
+    const initialLoad = window.setTimeout(() => void loadSocial(), 0);
     const timer = window.setInterval(() => void loadSocial(), 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [loadSocial]);
 
   useEffect(() => {
-    void loadMessages();
+    const initialLoad = window.setTimeout(() => void loadMessages(), 0);
     const timer = window.setInterval(() => void loadMessages(), 2000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [loadMessages]);
 
   useEffect(() => {
-    void loadCalls();
+    const initialLoad = window.setTimeout(() => void loadCalls(), 0);
     const timer = window.setInterval(() => void loadCalls(), 1500);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [loadCalls]);
 
   async function socialAction(action: string, friend: Friend) {
@@ -198,9 +209,7 @@ export default function HomeHub({
       <nav className="server-rail" aria-label="Навигация">
         <button className="brand-mark active" aria-label="Главная">T</button>
         <span className="rail-divider" />
-        <button className="server-icon violet" onClick={() => onOpenServer("totalk")} aria-label="Открыть сервер ToTalk">S</button>
-        <button className="server-icon coral" onClick={() => onOpenServer("club")} aria-label="Открыть сервер Клуб">К</button>
-        <button className="server-icon blue" onClick={() => onOpenServer("games")} aria-label="Открыть игровой сервер">И</button>
+        <button className="brand-mark" onClick={onOpenServer} aria-label="Открыть ToTalk">T</button>
       </nav>
 
       <aside className="home-sidebar">

@@ -9,8 +9,14 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
+    "cf:build": "npm run build",
+    "cf:deploy": "npm run build && wrangler deploy --config wrangler.jsonc",
+    "cf:d1:migrate": "node scripts/apply-d1-migrations.mjs --remote",
+    "cf:d1:migrate:local": "node scripts/apply-d1-migrations.mjs --local",
+    "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "validate": "npm run lint && npm run typecheck && npm test",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

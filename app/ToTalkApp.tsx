@@ -15,23 +15,15 @@ type Message = {
   mine?: boolean;
 };
 
-const servers = [
-  { id: "totalk", short: "T", name: "ToTalk", subtitle: "Клуб создателей", tone: "brand", channels: ["welcome", "общий", "идеи", "музыка", "игры"] },
-  { id: "club", short: "КЛ", name: "Клуб", subtitle: "Друзья и общение", tone: "violet", channels: ["общий", "новости", "фото", "мемы"] },
-  { id: "games", short: "ИГ", name: "Игровая", subtitle: "Играем вместе", tone: "coral", channels: ["лобби", "поиск-группы", "клипы", "оффтоп"] },
-  { id: "music", short: "МУ", name: "Музыка", subtitle: "Слушаем и делимся", tone: "blue", channels: ["чат", "новинки", "плейлисты", "концерты"] },
-] as const;
-
-const initialMessages: Message[] = [
-  { id: 1, author: "ToTalk Bot", avatar: "T", time: "сегодня, 18:04", text: "Добро пожаловать в ToTalk! Это наше новое место для общения." },
-  { id: 2, author: "Алёна", avatar: "А", time: "18:07", text: "Всем привет! Кто уже успел посмотреть новые каналы?" },
-  { id: 3, author: "Макс", avatar: "М", time: "18:08", text: "Да! Интерфейс отлично смотрится и на телефоне 👌" },
-  { id: 4, author: "Алёна", avatar: "А", time: "18:09", text: "Давайте вечером созвонимся в голосовом?" },
-];
-
-const members = [
-  ["А", "Алёна", "В сети"], ["М", "Макс", "Играет"], ["Д", "Данил", "В сети"], ["Л", "Лера", "На телефоне"],
-];
+const workspace = {
+  id: "totalk",
+  short: "T",
+  name: "ToTalk",
+  subtitle: "Основной workspace",
+  tone: "brand",
+  channels: ["чат"],
+  voiceChannels: ["Голосовой"],
+} as const;
 
 type ToTalkAppProps = {
   user: {
@@ -44,20 +36,18 @@ type ToTalkAppProps = {
 
 export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   const [homeMode, setHomeMode] = useState(true);
-  const [serverId, setServerId] = useState("totalk");
-  const [channel, setChannel] = useState("общий");
+  const [channel, setChannel] = useState(workspace.channels[0]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [connection, setConnection] = useState<"loading" | "online" | "error">("loading");
   const [sending, setSending] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"channels" | "members" | null>(null);
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
-  const currentServer = servers.find((server) => server.id === serverId) ?? servers[0];
-  const voice = useVoiceChat(serverId);
+  const voice = useVoiceChat(workspace.id);
 
   const loadMessages = useCallback(async () => {
     try {
-      const query = new URLSearchParams({ server: serverId, channel });
+      const query = new URLSearchParams({ server: workspace.id, channel });
       const response = await fetch(`/api/messages?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("messages unavailable");
       const data = await response.json() as {
@@ -77,18 +67,19 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
     } catch {
       setConnection("error");
     }
-  }, [channel, serverId, user.id]);
+  }, [channel, user.id]);
 
   useEffect(() => {
-    void loadMessages();
+    const initialLoad = window.setTimeout(() => void loadMessages(), 0);
     const timer = window.setInterval(() => void loadMessages(), 2000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [loadMessages]);
 
-  function switchServer(id: string) {
-    const nextServer = servers.find((server) => server.id === id) ?? servers[0];
-    setServerId(nextServer.id);
-    setChannel(nextServer.channels[0]);
+  function openWorkspace() {
+    setChannel(workspace.channels[0]);
     setHomeMode(false);
     setMobilePanel(null);
   }
@@ -114,7 +105,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ serverId, channel, text }),
+        body: JSON.stringify({ serverId: workspace.id, channel, text }),
       });
       if (!response.ok) throw new Error("send failed");
       await loadMessages();
@@ -128,36 +119,41 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   }
 
   if (homeMode) {
-    return <HomeHub user={user} onLogout={onLogout} onOpenServer={switchServer} />;
+    return <HomeHub user={user} onLogout={onLogout} onOpenServer={openWorkspace} />;
   }
+
+  const liveMembers = [
+    { key: `self-${user.id}`, avatar: user.displayName.charAt(0).toUpperCase(), name: user.displayName, status: voice.room ? `В голосе: ${voice.room}` : `@${user.username}` },
+    ...voice.participants.map((participant) => ({
+      key: participant.peerId,
+      avatar: participant.displayName.charAt(0).toUpperCase() || "?",
+      name: participant.displayName,
+      status: `@${participant.username}`,
+    })),
+  ];
 
   return (
     <main className="app-shell">
       <nav className="server-rail" aria-label="Серверы">
         <button className="server-icon home-shortcut" onClick={() => setHomeMode(true)} aria-label="Главная">⌂</button>
-        {servers.map((server, index) => (
-          <div className="server-slot" key={server.id}>
-            {index === 1 && <span className="rail-divider" />}
-            <button
-              onClick={() => switchServer(server.id)}
-              className={`${server.tone === "brand" ? "brand-mark" : `server-icon ${server.tone}`} ${serverId === server.id ? "active" : ""}`}
-              aria-label={`Сервер ${server.name}`}
-              aria-pressed={serverId === server.id}
-            >{server.short}</button>
-          </div>
-        ))}
-        <button className="server-icon add" aria-label="Добавить сервер">+</button>
+        <span className="rail-divider" />
+        <div className="server-slot">
+          <button
+            onClick={openWorkspace}
+            className="brand-mark active"
+            aria-label="Открыть ToTalk"
+            aria-pressed="true"
+          >{workspace.short}</button>
+        </div>
       </nav>
 
       <aside className={`channel-panel ${mobilePanel === "channels" ? "mobile-open" : ""}`}>
-        <div className="workspace-title"><span><b>{currentServer.name}</b><small>{currentServer.subtitle}</small></span><span className={`connection ${connection}`}>{connection === "online" ? "● онлайн" : connection === "loading" ? "○ вход…" : "● нет связи"}</span></div>
+        <div className="workspace-title"><span><b>{workspace.name}</b><small>{workspace.subtitle}</small></span><span className={`connection ${connection}`}>{connection === "online" ? "● онлайн" : connection === "loading" ? "○ вход…" : "● нет связи"}</span></div>
         <div className="channel-scroll">
-          <button className="event-card"><span>✦</span><div><b>Новое событие</b><small>Создать встречу</small></div></button>
-          <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span><button>+</button></div>
-          {currentServer.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}{item === "общий" && <em>3</em>}</button>)}
-          <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span><button>+</button></div>
-          <button onClick={() => void voice.join("Лобби")} className={`channel ${voice.room === "Лобби" ? "selected voice-active" : ""}`}><span>♫</span>Лобби{voice.room === "Лобби" && <em>{voice.participantCount}</em>}</button>
-          <button onClick={() => void voice.join("Комната отдыха")} className={`channel ${voice.room === "Комната отдыха" ? "selected voice-active" : ""}`}><span>♫</span>Комната отдыха{voice.room === "Комната отдыха" && <em>{voice.participantCount}</em>}</button>
+          <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span></div>
+          {workspace.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}</button>)}
+          <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span></div>
+          {workspace.voiceChannels.map((item) => <button key={item} onClick={() => void voice.join(item)} className={`channel ${voice.room === item ? "selected voice-active" : ""}`}><span>♫</span>{item}{voice.room === item && <em>{voice.participantCount}</em>}</button>)}
           {voice.room && <div className="voice-users"><span className="mini-avatar">{user.displayName.charAt(0).toUpperCase()}</span><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
           {voice.room && voice.participants.map((participant) => (
             <div className="voice-users remote-voice-user" key={participant.peerId}>
@@ -197,11 +193,8 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
       </section>
 
       <aside className={`member-panel ${mobilePanel === "members" ? "mobile-open" : ""}`}>
-        <div className="member-title">В СЕТИ — 4</div>
-        {members.map(([avatar, name, status]) => <button className="member" key={name}><span className={`avatar avatar-${avatar.charCodeAt(0) % 4}`}>{avatar}<i /></span><span><b>{name}</b><small>{status}</small></span></button>)}
-        <div className="member-title">НЕ В СЕТИ — 2</div>
-        <button className="member offline"><span className="avatar">C</span><span><b>Саша</b><small>Не в сети</small></span></button>
-        <button className="member offline"><span className="avatar">K</span><span><b>Kirill</b><small>Не в сети</small></span></button>
+        <div className="member-title">УЧАСТНИКИ — {liveMembers.length}</div>
+        {liveMembers.map((member) => <button className="member" key={member.key}><span className={`avatar avatar-${member.avatar.charCodeAt(0) % 4}`}>{member.avatar}<i /></span><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
       </aside>
       {mobilePanel && <button className="scrim" onClick={() => setMobilePanel(null)} aria-label="Закрыть панель" />}
     </main>
