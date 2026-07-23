@@ -9,6 +9,12 @@ type VoiceSignal = {
   kind: "offer" | "answer" | "ice";
   payload: string;
 };
+export type VoiceParticipant = {
+  peerId: string;
+  userId: number;
+  displayName: string;
+  username: string;
+};
 
 const ICE_SERVERS: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -19,6 +25,7 @@ export function useVoiceChat(serverId: string) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [muted, setMuted] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
+  const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
   const [error, setError] = useState("");
   const peerIdRef = useRef("");
   const roomRef = useRef<string | null>(null);
@@ -134,10 +141,22 @@ export function useVoiceChat(serverId: string) {
       const response = await fetch(`/api/voice?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("voice poll failed");
       const data = await response.json() as {
-        peers: Array<{ peerId: string }>;
+        peers: VoiceParticipant[];
         signals: VoiceSignal[];
       };
+      setParticipants(data.peers);
       setParticipantCount(data.peers.length + 1);
+      const livePeerIds = new Set(data.peers.map((peer) => peer.peerId));
+      connectionsRef.current.forEach((connection, remotePeerId) => {
+        if (!livePeerIds.has(remotePeerId)) {
+          connection.close();
+          connectionsRef.current.delete(remotePeerId);
+          const audio = audioRef.current.get(remotePeerId);
+          audio?.pause();
+          audio?.remove();
+          audioRef.current.delete(remotePeerId);
+        }
+      });
       for (const peer of data.peers) {
         if (!connectionsRef.current.has(peer.peerId) && peerId < peer.peerId) {
           await createConnection(peer.peerId, true);
@@ -178,6 +197,7 @@ export function useVoiceChat(serverId: string) {
     setRoom(null);
     setStatus("idle");
     setParticipantCount(0);
+    setParticipants([]);
     setMuted(false);
   }, [postVoice]);
 
@@ -200,6 +220,7 @@ export function useVoiceChat(serverId: string) {
       setRoom(channel);
       setStatus("connected");
       setParticipantCount(1);
+      setParticipants([]);
       await poll();
       pollTimerRef.current = window.setInterval(() => void poll(), 1200);
     } catch {
@@ -230,5 +251,5 @@ export function useVoiceChat(serverId: string) {
     void leave();
   }, [leave]);
 
-  return { room, status, muted, participantCount, error, join, leave, toggleMute };
+  return { room, status, muted, participantCount, participants, error, join, leave, toggleMute };
 }

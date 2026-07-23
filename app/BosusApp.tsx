@@ -151,6 +151,14 @@ export default function BosusApp({ user, onLogout }: BosusAppProps) {
           <button onClick={() => void voice.join("Лобби")} className={`channel ${voice.room === "Лобби" ? "selected voice-active" : ""}`}><span>♫</span>Лобби{voice.room === "Лобби" && <em>{voice.participantCount}</em>}</button>
           <button onClick={() => void voice.join("Комната отдыха")} className={`channel ${voice.room === "Комната отдыха" ? "selected voice-active" : ""}`}><span>♫</span>Комната отдыха{voice.room === "Комната отдыха" && <em>{voice.participantCount}</em>}</button>
           {voice.room && <div className="voice-users"><span className="mini-avatar">{user.displayName.charAt(0).toUpperCase()}</span><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
+          {voice.room && voice.participants.map((participant) => (
+            <div className="voice-users remote-voice-user" key={participant.peerId}>
+              <span className="mini-avatar">{participant.displayName.charAt(0).toUpperCase() || "?"}</span>
+              <div><b>{participant.displayName}</b><small>@{participant.username} · в эфире</small></div>
+              <i className="voice-live-dot" aria-label="Подключён" />
+            </div>
+          ))}
+          {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
           {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
         <div className="user-bar"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><div><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></div>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
