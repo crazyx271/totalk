@@ -44,7 +44,13 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await response.json() as { user?: BosusUser; error?: string };
+      const raw = await response.text();
+      let data: { user?: BosusUser; error?: string };
+      try {
+        data = JSON.parse(raw) as { user?: BosusUser; error?: string };
+      } catch {
+        throw new Error("Сервер авторизации временно недоступен");
+      }
       if (!response.ok || !data.user) throw new Error(data.error ?? "Не удалось войти");
       setUser(data.user);
     } catch (authError) {

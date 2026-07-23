@@ -33,7 +33,7 @@ export async function hashPassword(password: string, salt = randomHex(16)) {
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: hexToBytes(salt), iterations: 120_000 },
+    { name: "PBKDF2", hash: "SHA-256", salt: hexToBytes(salt), iterations: 100_000 },
     key,
     256,
   );
