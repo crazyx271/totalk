@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell } from "electron";
+import { app, BrowserWindow, Menu, session, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -91,6 +91,14 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+    return permission === "media" && new URL(requestingOrigin).origin === BOSUS_ORIGIN;
+  });
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const sameOrigin = webContents.getURL().startsWith(BOSUS_ORIGIN);
+    const audioOnly = !details.mediaTypes || details.mediaTypes.every((type) => type === "audio");
+    callback(permission === "media" && sameOrigin && audioOnly);
+  });
   createMenu();
   createWindow();
 

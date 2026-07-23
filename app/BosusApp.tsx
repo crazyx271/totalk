@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useVoiceChat } from "./useVoiceChat";
 
 type Message = {
   id: number;
@@ -50,6 +51,7 @@ export default function BosusApp({ user, onLogout }: BosusAppProps) {
   const [mobilePanel, setMobilePanel] = useState<"channels" | "members" | null>(null);
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
   const currentServer = servers.find((server) => server.id === serverId) ?? servers[0];
+  const voice = useVoiceChat(serverId);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -146,11 +148,12 @@ export default function BosusApp({ user, onLogout }: BosusAppProps) {
           <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span><button>+</button></div>
           {currentServer.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}{item === "общий" && <em>3</em>}</button>)}
           <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span><button>+</button></div>
-          <button className="channel"><span>♫</span>Лобби</button>
-          <button className="channel"><span>♫</span>Комната отдыха</button>
-          <div className="voice-users"><span className="mini-avatar">M</span><div><b>Макс</b><small>В эфире</small></div></div>
+          <button onClick={() => void voice.join("Лобби")} className={`channel ${voice.room === "Лобби" ? "selected voice-active" : ""}`}><span>♫</span>Лобби{voice.room === "Лобби" && <em>{voice.participantCount}</em>}</button>
+          <button onClick={() => void voice.join("Комната отдыха")} className={`channel ${voice.room === "Комната отдыха" ? "selected voice-active" : ""}`}><span>♫</span>Комната отдыха{voice.room === "Комната отдыха" && <em>{voice.participantCount}</em>}</button>
+          {voice.room && <div className="voice-users"><span className="mini-avatar">{user.displayName.charAt(0).toUpperCase()}</span><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
+          {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
-        <div className="user-bar"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><div><b>{user.displayName}</b><small>@{user.username}</small></div><button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
+        <div className="user-bar"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><div><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></div>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
       </aside>
 
       <section className="chat-panel">

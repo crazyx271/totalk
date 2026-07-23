@@ -33,3 +33,27 @@ export const messages = sqliteTable("messages", {
 }, (table) => [
   index("messages_room_created_idx").on(table.serverId, table.channel, table.createdAt),
 ]);
+
+export const voicePeers = sqliteTable("voice_peers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  peerId: text("peer_id").notNull(),
+  serverId: text("server_id").notNull(),
+  channel: text("channel").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("voice_peers_peer_id_unique").on(table.peerId),
+  index("voice_peers_room_idx").on(table.serverId, table.channel, table.updatedAt),
+]);
+
+export const voiceSignals = sqliteTable("voice_signals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  senderPeerId: text("sender_peer_id").notNull(),
+  targetPeerId: text("target_peer_id").notNull(),
+  kind: text("kind").notNull(),
+  payload: text("payload").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("voice_signals_target_idx").on(table.targetPeerId, table.id),
+  index("voice_signals_created_idx").on(table.createdAt),
+]);

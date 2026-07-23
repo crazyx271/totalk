@@ -53,7 +53,10 @@
       ],
       "category": "public.app-category.social-networking",
       "icon": "assets/icon.png",
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Bosus использует микрофон для голосовых каналов."
+      }
     }
   }
 }
