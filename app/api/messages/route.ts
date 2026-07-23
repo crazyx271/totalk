@@ -64,3 +64,24 @@ export async function POST(request: Request) {
     message: { ...message, userId: user.id, author: user.displayName, username: user.username },
   }, { status: 201 });
 }
+
+export async function PATCH(request: Request) {
+  const user = await getSessionUser(request);
+  if (!user) return Response.json({ error: "Требуется вход" }, { status: 401 });
+
+  const payload = (await request.json()) as { id?: number; text?: string };
+  const id = Number(payload.id);
+  const text = payload.text?.trim() ?? "";
+  if (!Number.isInteger(id) || id < 1 || !text || text.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: "Некорректное сообщение" }, { status: 400 });
+  }
+
+  const [message] = await getDb()
+    .update(messages)
+    .set({ content: text })
+    .where(and(eq(messages.id, id), eq(messages.userId, user.id)))
+    .returning({ id: messages.id, text: messages.content });
+
+  if (!message) return Response.json({ error: "Сообщение не найдено" }, { status: 404 });
+  return Response.json({ message });
+}
