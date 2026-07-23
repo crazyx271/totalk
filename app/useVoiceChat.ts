@@ -17,7 +17,12 @@ export type VoiceParticipant = {
 };
 
 const ICE_SERVERS: RTCConfiguration = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [{
+    urls: [
+      "stun:stun.cloudflare.com:3478",
+      "stun:stun.l.google.com:19302",
+    ],
+  }],
 };
 
 export function useVoiceChat(serverId: string) {
@@ -32,7 +37,9 @@ export function useVoiceChat(serverId: string) {
   const streamRef = useRef<MediaStream | null>(null);
   const connectionsRef = useRef(new Map<string, RTCPeerConnection>());
   const audioRef = useRef(new Map<string, HTMLAudioElement>());
+  const pendingCandidatesRef = useRef(new Map<string, RTCIceCandidateInit[]>());
   const pollTimerRef = useRef<number | null>(null);
+  const pollingRef = useRef(false);
   const lastSignalRef = useRef(0);
   const serverRef = useRef(serverId);
 
@@ -109,22 +116,40 @@ export function useVoiceChat(serverId: string) {
   const handleSignal = useCallback(async (signal: VoiceSignal) => {
     const data = JSON.parse(signal.payload) as RTCSessionDescriptionInit | RTCIceCandidateInit;
     const connection = await createConnection(signal.senderPeerId, false);
+    const flushCandidates = async () => {
+      const candidates = pendingCandidatesRef.current.get(signal.senderPeerId) ?? [];
+      pendingCandidatesRef.current.delete(signal.senderPeerId);
+      for (const candidate of candidates) {
+        await connection.addIceCandidate(candidate);
+      }
+    };
     if (signal.kind === "offer") {
       await connection.setRemoteDescription(data as RTCSessionDescriptionInit);
+      await flushCandidates();
       const answer = await connection.createAnswer();
       await connection.setLocalDescription(answer);
       await sendSignal(signal.senderPeerId, "answer", answer);
     } else if (signal.kind === "answer" && connection.signalingState === "have-local-offer") {
       await connection.setRemoteDescription(data as RTCSessionDescriptionInit);
+      await flushCandidates();
     } else if (signal.kind === "ice") {
-      await connection.addIceCandidate(data as RTCIceCandidateInit).catch(() => undefined);
+      const candidate = data as RTCIceCandidateInit;
+      if (connection.remoteDescription) {
+        await connection.addIceCandidate(candidate);
+      } else {
+        const queued = pendingCandidatesRef.current.get(signal.senderPeerId) ?? [];
+        queued.push(candidate);
+        pendingCandidatesRef.current.set(signal.senderPeerId, queued);
+      }
     }
   }, [createConnection, sendSignal]);
 
   const poll = useCallback(async () => {
+    if (pollingRef.current) return;
     const currentRoom = roomRef.current;
     const peerId = peerIdRef.current;
     if (!currentRoom || !peerId) return;
+    pollingRef.current = true;
     try {
       await postVoice({
         action: "heartbeat",
@@ -169,6 +194,8 @@ export function useVoiceChat(serverId: string) {
     } catch {
       setError("Связь с голосовой комнатой прервана");
       setStatus("error");
+    } finally {
+      pollingRef.current = false;
     }
   }, [createConnection, handleSignal, postVoice]);
 
@@ -183,6 +210,8 @@ export function useVoiceChat(serverId: string) {
     }
     connectionsRef.current.forEach((connection) => connection.close());
     connectionsRef.current.clear();
+    pendingCandidatesRef.current.clear();
+    pollingRef.current = false;
     audioRef.current.forEach((audio) => {
       audio.pause();
       audio.srcObject = null;
