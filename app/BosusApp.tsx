@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import HomeHub from "./HomeHub";
 import { useVoiceChat } from "./useVoiceChat";
 
 type Message = {
@@ -42,6 +43,7 @@ type BosusAppProps = {
 };
 
 export default function BosusApp({ user, onLogout }: BosusAppProps) {
+  const [homeMode, setHomeMode] = useState(true);
   const [serverId, setServerId] = useState("bosus");
   const [channel, setChannel] = useState("общий");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -87,6 +89,7 @@ export default function BosusApp({ user, onLogout }: BosusAppProps) {
     const nextServer = servers.find((server) => server.id === id) ?? servers[0];
     setServerId(nextServer.id);
     setChannel(nextServer.channels[0]);
+    setHomeMode(false);
     setMobilePanel(null);
   }
 
@@ -124,9 +127,14 @@ export default function BosusApp({ user, onLogout }: BosusAppProps) {
     }
   }
 
+  if (homeMode) {
+    return <HomeHub user={user} onLogout={onLogout} onOpenServer={switchServer} />;
+  }
+
   return (
     <main className="app-shell">
       <nav className="server-rail" aria-label="Серверы">
+        <button className="server-icon home-shortcut" onClick={() => setHomeMode(true)} aria-label="Главная">⌂</button>
         {servers.map((server, index) => (
           <div className="server-slot" key={server.id}>
             {index === 1 && <span className="rail-divider" />}

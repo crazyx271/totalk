@@ -57,3 +57,40 @@ export const voiceSignals = sqliteTable("voice_signals", {
   index("voice_signals_target_idx").on(table.targetPeerId, table.id),
   index("voice_signals_created_idx").on(table.createdAt),
 ]);
+
+export const friendships = sqliteTable("friendships", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  pairKey: text("pair_key").notNull(),
+  requesterId: integer("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  addresseeId: integer("addressee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("friendships_pair_unique").on(table.pairKey),
+  index("friendships_requester_idx").on(table.requesterId, table.status),
+  index("friendships_addressee_idx").on(table.addresseeId, table.status),
+]);
+
+export const directMessages = sqliteTable("direct_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientId: integer("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("direct_messages_sender_recipient_idx").on(table.senderId, table.recipientId, table.createdAt),
+  index("direct_messages_recipient_sender_idx").on(table.recipientId, table.senderId, table.createdAt),
+]);
+
+export const directCalls = sqliteTable("direct_calls", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  callerId: integer("caller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  calleeId: integer("callee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  room: text("room").notNull(),
+  status: text("status").notNull().default("ringing"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  index("direct_calls_caller_idx").on(table.callerId, table.status, table.updatedAt),
+  index("direct_calls_callee_idx").on(table.calleeId, table.status, table.updatedAt),
+]);

@@ -2,10 +2,21 @@ import { and, asc, eq, gt, lt, ne } from "drizzle-orm";
 import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { users, voicePeers, voiceSignals } from "../../../db/schema";
+import { areFriends } from "../../social";
 
 const PEER_TTL_MS = 20_000;
 const SIGNAL_TTL_MS = 120_000;
 const SIGNAL_KINDS = new Set(["offer", "answer", "ice"]);
+
+async function canJoinVoiceRoom(userId: number, serverId: string, channel: string) {
+  if (serverId !== "dm") return true;
+  const match = /^dm:(\d+):(\d+)$/.exec(channel);
+  if (!match) return false;
+  const firstUserId = Number(match[1]);
+  const secondUserId = Number(match[2]);
+  if (userId !== firstUserId && userId !== secondUserId) return false;
+  return areFriends(firstUserId, secondUserId);
+}
 
 async function cleanVoiceState() {
   const now = Date.now();
@@ -25,6 +36,10 @@ export async function GET(request: Request) {
   const after = Number(url.searchParams.get("after") ?? 0);
   if (!peerId || !serverId || !channel || !Number.isFinite(after)) {
     return Response.json({ error: "Некорректная голосовая комната" }, { status: 400 });
+  }
+
+  if (!await canJoinVoiceRoom(user.id, serverId, channel)) {
+    return Response.json({ error: "Голосовая комната недоступна" }, { status: 403 });
   }
 
   await cleanVoiceState();
@@ -79,6 +94,9 @@ export async function POST(request: Request) {
   if (action === "join" || action === "heartbeat") {
     if (!serverId || !channel) {
       return Response.json({ error: "Не указана комната" }, { status: 400 });
+    }
+    if (!await canJoinVoiceRoom(user.id, serverId, channel)) {
+      return Response.json({ error: "Голосовая комната недоступна" }, { status: 403 });
     }
     await cleanVoiceState();
     await db.insert(voicePeers).values({
