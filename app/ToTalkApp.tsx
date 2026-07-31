@@ -202,6 +202,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
         <VoiceCallOverlay
           title={`♫ ${voice.room}`}
           subtitle={voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}
+          error={voice.error}
           selfName={user.displayName}
           participants={voice.participants}
           localStream={voice.localStream}

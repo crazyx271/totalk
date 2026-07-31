@@ -336,6 +336,7 @@ export default function HomeHub({
         <VoiceCallOverlay
           title={activeCall.person.displayName}
           subtitle={activeCall.status === "ringing" ? "Звоним…" : voice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
+          error={voice.error}
           selfName={user.displayName}
           participants={voice.participants}
           localStream={voice.localStream}

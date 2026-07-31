@@ -56,6 +56,7 @@ button { color:inherit; }
 .call-tile-avatar{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:linear-gradient(145deg,#6555bd,#3f8f96);font-weight:800;font-size:20px}.call-tile.has-video .call-tile-avatar{display:none}
 .call-tile-label{position:absolute;left:8px;bottom:6px;display:flex;flex-direction:column;font-size:10px;color:#fff;text-shadow:0 1px 3px #000a}.call-tile-label b{font-size:11px}
 .voice-overlay-controls{display:flex;gap:8px;justify-content:center}.voice-overlay-controls button{border:0;border-radius:10px;padding:9px 14px;color:#fff;cursor:pointer;background:#30323b;font-size:15px}.voice-overlay-controls button[aria-pressed="true"]{background:#4a4c59}.voice-overlay-controls .decline-call{background:#bc4056!important}
+.voice-overlay-error{margin:0 2px;padding:8px 10px;border-radius:8px;background:#4c2730;color:#ffadb8;font-size:11px;line-height:1.35;max-width:min(560px,calc(100vw - 60px))}
 
 @media(max-width:760px){
   .home-shell{grid-template-columns:58px minmax(0,1fr)}

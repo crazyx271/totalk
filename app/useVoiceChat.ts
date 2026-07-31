@@ -288,6 +288,11 @@ export function useVoiceChat(serverId: string) {
     await leave();
     setStatus("joining");
     setError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("error");
+      setError("Микрофон недоступен: сайт открыт не по HTTPS. Голос и видео работают только на защищённом соединении.");
+      return;
+    }
     try {
       await loadIceConfig();
       const stream = await navigator.mediaDevices.getUserMedia({

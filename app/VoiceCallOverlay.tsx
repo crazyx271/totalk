@@ -30,6 +30,7 @@ function CallTile({ name, sub, stream, isLocal = false }: CallTileProps) {
 export type VoiceCallOverlayProps = {
   title: string;
   subtitle?: string;
+  error?: string;
   selfName: string;
   participants: VoiceParticipant[];
   localStream: MediaStream | null;
@@ -44,6 +45,7 @@ export type VoiceCallOverlayProps = {
 export default function VoiceCallOverlay({
   title,
   subtitle,
+  error,
   selfName,
   participants,
   localStream,
@@ -62,6 +64,7 @@ export default function VoiceCallOverlay({
         <span className="voice-pulse">{selfName.charAt(0).toUpperCase()}</span>
         <div><b>{title}</b>{subtitle && <small>{subtitle}</small>}</div>
       </div>
+      {error && <div className="voice-overlay-error">{error}</div>}
       <div className="call-tile-grid">
         <CallTile name={selfName} sub="Вы" stream={localStream} isLocal />
         {participants.map((participant) => (
