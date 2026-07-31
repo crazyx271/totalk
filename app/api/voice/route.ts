@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     const targetPeerId = payload.targetPeerId?.slice(0, 80) ?? "";
     const kind = payload.kind ?? "";
     const encoded = JSON.stringify(payload.data ?? null);
-    if (!targetPeerId || !SIGNAL_KINDS.has(kind) || encoded.length > 16_000) {
+    if (!targetPeerId || !SIGNAL_KINDS.has(kind) || encoded.length > 32_000) {
       return Response.json({ error: "Некорректный сигнал" }, { status: 400 });
     }
     const [sender] = await db.select({ id: voicePeers.id }).from(voicePeers)

@@ -37,8 +37,12 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 /dist/
-/.wrangler/
+/.output/
 /outputs/
 /work/
 /desktop/node_modules/
 /desktop/release/
+
+# local sqlite database
+/data/*.sqlite*
+!/data/.gitkeep

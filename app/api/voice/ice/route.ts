@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { getSessionUser } from "../../../auth";
 
 type IceServer = {
@@ -50,9 +49,9 @@ async function signTurnUsername(username: string, secret: string) {
 }
 
 async function createTurnServer(userId: number, urls: string[]) {
-  const secret = env.TURN_SECRET?.trim() ?? "";
+  const secret = process.env.TURN_SECRET?.trim() ?? "";
   if (secret) {
-    const ttl = parseTtl(env.TURN_TTL_SECONDS);
+    const ttl = parseTtl(process.env.TURN_TTL_SECONDS);
     const expiresAt = Math.floor(Date.now() / 1000) + ttl;
     const username = `${expiresAt}:user-${userId}`;
     return {
@@ -62,8 +61,8 @@ async function createTurnServer(userId: number, urls: string[]) {
     } satisfies IceServer;
   }
 
-  const username = env.TURN_USERNAME?.trim() ?? "";
-  const credential = env.TURN_CREDENTIAL?.trim() ?? "";
+  const username = process.env.TURN_USERNAME?.trim() ?? "";
+  const credential = process.env.TURN_CREDENTIAL?.trim() ?? "";
   if (!username || !credential) return null;
   return { urls, username, credential } satisfies IceServer;
 }
@@ -74,7 +73,7 @@ export async function GET(request: Request) {
 
   const iceServers: IceServer[] = [STUN_SERVERS];
 
-  const turnUrls = parseIceUrls(env.TURN_URLS);
+  const turnUrls = parseIceUrls(process.env.TURN_URLS);
   if (turnUrls.length > 0) {
     const turnServer = await createTurnServer(user.id, turnUrls);
     if (turnServer) iceServers.push(turnServer);

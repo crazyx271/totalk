@@ -8,6 +8,7 @@ test("production build packages release assets", async () => {
   await Promise.all([
     access(new URL("../dist/server/index.js", import.meta.url)),
     access(new URL("../dist/client", import.meta.url)),
+    access(new URL("../dist/standalone/server.js", import.meta.url)),
     access(new URL("../dist/.openai/hosting.json", import.meta.url)),
     access(new URL("../dist/.openai/drizzle", import.meta.url)),
   ]);
@@ -29,27 +30,43 @@ test("web app sources describe the ToTalk v1 product", async () => {
   assert.doesNotMatch(app, /Клуб|Игровая|Музыка|Лобби|Комната отдыха/);
   assert.match(iceRoute, /TURN_SECRET/);
   assert.match(iceRoute, /Требуется вход/);
+  assert.doesNotMatch(iceRoute, /cloudflare:workers/);
   assert.match(healthRoute, /service:\s*"totalk"/);
-  assert.match(healthRoute, /d1Configured/);
+  assert.match(healthRoute, /dbConfigured/);
 });
 
-test("release docs and desktop shell are configurable for deployment", async () => {
-  const [readme, desktopMain, hostingConfig, wranglerConfig, packageJson] = await Promise.all([
+test("self-hosted build and deploy docs are wired up", async () => {
+  const [readme, desktopMain, packageJson, dbIndex, nextConfig] = await Promise.all([
     readFile(new URL("../README.md", import.meta.url), "utf8"),
     readFile(new URL("../desktop/src/main.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
-    readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(readme, /TURN_URLS=/);
   assert.match(readme, /TURN_SECRET=/);
-  assert.match(readme, /wrangler d1 create totalk-prod/);
   assert.match(readme, /coturn/i);
+  assert.match(readme, /systemd/i);
+  assert.match(readme, /DATABASE_PATH/);
+  assert.doesNotMatch(readme, /wrangler|Cloudflare Workers|totalk-prod/i);
   assert.match(desktopMain, /process\.env\.TOTALK_URL/);
-  assert.match(hostingConfig, /"d1"\s*:\s*"DB"/);
-  assert.match(wranglerConfig, /REPLACE_WITH_D1_DATABASE_ID/);
-  assert.match(packageJson, /cf:deploy/);
-  assert.match(packageJson, /cf:d1:migrate/);
+  assert.doesNotMatch(desktopMain, /audioOnly/);
+  assert.match(packageJson, /db:migrate/);
+  assert.match(packageJson, /better-sqlite3/);
+  assert.doesNotMatch(packageJson, /wrangler|@cloudflare\/vite-plugin/);
+  assert.doesNotMatch(dbIndex, /cloudflare:workers/);
+  assert.match(nextConfig, /output:\s*"standalone"/);
+  assert.match(nextConfig, /serverExternalPackages/);
   await access(new URL("drizzle/meta/_journal.json", root));
+});
+
+test("video calling is wired up in the voice call stack", async () => {
+  const [voiceHook, voiceRoute] = await Promise.all([
+    readFile(new URL("../app/useVoiceChat.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/voice/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(voiceHook, /toggleCamera/);
+  assert.match(voiceRoute, /32_000/);
 });

@@ -2,6 +2,7 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { ToTalkUser } from "./page";
+import VoiceCallOverlay from "./VoiceCallOverlay";
 import { useVoiceChat } from "./useVoiceChat";
 
 type Friend = {
@@ -304,12 +305,21 @@ export default function HomeHub({
         <button className="accept-call" onClick={() => void acceptCall(incomingCall)}>☎</button>
         <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")}>×</button>
       </div>}
-      {activeCall && <div className="active-call-panel">
-        <span className="voice-pulse">{activeCall.person.displayName.charAt(0).toUpperCase()}</span>
-        <div><b>{activeCall.person.displayName}</b><small>{activeCall.status === "ringing" ? "Звоним…" : voice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}</small></div>
-        <button onClick={voice.toggleMute}>{voice.muted ? "Включить микрофон" : "Выключить микрофон"}</button>
-        <button className="decline-call" onClick={() => void finishCall(activeCall, "end")}>Завершить</button>
-      </div>}
+      {activeCall && (
+        <VoiceCallOverlay
+          title={activeCall.person.displayName}
+          subtitle={activeCall.status === "ringing" ? "Звоним…" : voice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
+          selfName={user.displayName}
+          participants={voice.participants}
+          localStream={voice.localStream}
+          remoteStreams={voice.remoteStreams}
+          cameraOn={voice.cameraOn}
+          muted={voice.muted}
+          onToggleMute={voice.toggleMute}
+          onToggleCamera={voice.toggleCamera}
+          onLeave={() => void finishCall(activeCall, "end")}
+        />
+      )}
     </main>
   );
 }

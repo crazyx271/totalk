@@ -31,24 +31,39 @@ const DEFAULT_ICE_SERVERS: RTCConfiguration = {
   }],
 };
 
+const CAMERA_CONSTRAINTS: MediaTrackConstraints = {
+  width: { ideal: 640 },
+  height: { ideal: 480 },
+  frameRate: { ideal: 24 },
+};
+
 export function useVoiceChat(serverId: string) {
   const [room, setRoom] = useState<string | null>(null);
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [muted, setMuted] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [error, setError] = useState("");
   const peerIdRef = useRef("");
   const roomRef = useRef<string | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const localVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const connectionsRef = useRef(new Map<string, RTCPeerConnection>());
-  const audioRef = useRef(new Map<string, HTMLAudioElement>());
+  const remoteStreamsRef = useRef(new Map<string, MediaStream>());
+  const makingOfferRef = useRef(new Map<string, boolean>());
   const pendingCandidatesRef = useRef(new Map<string, RTCIceCandidateInit[]>());
   const pollTimerRef = useRef<number | null>(null);
   const pollingRef = useRef(false);
   const lastSignalRef = useRef(0);
   const serverRef = useRef(serverId);
   const iceConfigRef = useRef<RTCConfiguration>(DEFAULT_ICE_SERVERS);
+
+  const syncRemoteStreams = useCallback(() => {
+    setRemoteStreams(new Map(remoteStreamsRef.current));
+  }, []);
 
   const loadIceConfig = useCallback(async () => {
     try {
@@ -94,7 +109,17 @@ export function useVoiceChat(serverId: string) {
     });
   }, [postVoice]);
 
-  const createConnection = useCallback(async (remotePeerId: string, makeOffer: boolean) => {
+  const dropConnection = useCallback((remotePeerId: string) => {
+    const connection = connectionsRef.current.get(remotePeerId);
+    connection?.close();
+    connectionsRef.current.delete(remotePeerId);
+    remoteStreamsRef.current.delete(remotePeerId);
+    makingOfferRef.current.delete(remotePeerId);
+    pendingCandidatesRef.current.delete(remotePeerId);
+    syncRemoteStreams();
+  }, [syncRemoteStreams]);
+
+  const createConnection = useCallback(async (remotePeerId: string) => {
     const existing = connectionsRef.current.get(remotePeerId);
     if (existing) return existing;
 
@@ -109,37 +134,41 @@ export function useVoiceChat(serverId: string) {
     };
     connection.ontrack = (event) => {
       const stream = event.streams[0] ?? new MediaStream([event.track]);
-      let audio = audioRef.current.get(remotePeerId);
-      if (!audio) {
-        audio = new Audio();
-        audio.autoplay = true;
-        audio.preload = "auto";
-        audio.setAttribute("playsinline", "true");
-        audioRef.current.set(remotePeerId, audio);
+      if (!remoteStreamsRef.current.has(remotePeerId)) {
+        stream.onremovetrack = syncRemoteStreams;
       }
-      audio.srcObject = stream;
-      void audio.play().catch(() => undefined);
+      remoteStreamsRef.current.set(remotePeerId, stream);
+      event.track.onended = syncRemoteStreams;
+      syncRemoteStreams();
+    };
+    // Fires for the initial addTrack above and again whenever a track is
+    // later added/removed (e.g. toggling the camera mid-call). Both peers
+    // may negotiate independently; handleSignal resolves glare (see
+    // "offer" handling below) using peerId ordering as the polite/impolite tiebreak.
+    connection.onnegotiationneeded = async () => {
+      try {
+        makingOfferRef.current.set(remotePeerId, true);
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+        await sendSignal(remotePeerId, "offer", connection.localDescription);
+      } catch {
+        // Next track change or poll cycle will retry negotiation.
+      } finally {
+        makingOfferRef.current.set(remotePeerId, false);
+      }
     };
     connection.onconnectionstatechange = () => {
       if (["failed", "closed"].includes(connection.connectionState)) {
-        connection.close();
-        connectionsRef.current.delete(remotePeerId);
-        audioRef.current.get(remotePeerId)?.remove();
-        audioRef.current.delete(remotePeerId);
+        dropConnection(remotePeerId);
       }
     };
 
-    if (makeOffer) {
-      const offer = await connection.createOffer();
-      await connection.setLocalDescription(offer);
-      await sendSignal(remotePeerId, "offer", offer);
-    }
     return connection;
-  }, [sendSignal]);
+  }, [dropConnection, sendSignal, syncRemoteStreams]);
 
   const handleSignal = useCallback(async (signal: VoiceSignal) => {
     const data = JSON.parse(signal.payload) as RTCSessionDescriptionInit | RTCIceCandidateInit;
-    const connection = await createConnection(signal.senderPeerId, false);
+    const connection = await createConnection(signal.senderPeerId);
     const flushCandidates = async () => {
       const candidates = pendingCandidatesRef.current.get(signal.senderPeerId) ?? [];
       pendingCandidatesRef.current.delete(signal.senderPeerId);
@@ -148,6 +177,13 @@ export function useVoiceChat(serverId: string) {
       }
     };
     if (signal.kind === "offer") {
+      const polite = peerIdRef.current > signal.senderPeerId;
+      const making = makingOfferRef.current.get(signal.senderPeerId) ?? false;
+      const collision = making || connection.signalingState !== "stable";
+      if (collision) {
+        if (!polite) return;
+        await connection.setLocalDescription({ type: "rollback" });
+      }
       await connection.setRemoteDescription(data as RTCSessionDescriptionInit);
       await flushCandidates();
       const answer = await connection.createAnswer();
@@ -196,19 +232,12 @@ export function useVoiceChat(serverId: string) {
       setParticipants(data.peers);
       setParticipantCount(data.peers.length + 1);
       const livePeerIds = new Set(data.peers.map((peer) => peer.peerId));
-      connectionsRef.current.forEach((connection, remotePeerId) => {
-        if (!livePeerIds.has(remotePeerId)) {
-          connection.close();
-          connectionsRef.current.delete(remotePeerId);
-          const audio = audioRef.current.get(remotePeerId);
-          audio?.pause();
-          audio?.remove();
-          audioRef.current.delete(remotePeerId);
-        }
+      [...connectionsRef.current.keys()].forEach((remotePeerId) => {
+        if (!livePeerIds.has(remotePeerId)) dropConnection(remotePeerId);
       });
       for (const peer of data.peers) {
         if (!connectionsRef.current.has(peer.peerId) && peerId < peer.peerId) {
-          await createConnection(peer.peerId, true);
+          await createConnection(peer.peerId);
         }
       }
       for (const signal of data.signals) {
@@ -221,7 +250,7 @@ export function useVoiceChat(serverId: string) {
     } finally {
       pollingRef.current = false;
     }
-  }, [createConnection, handleSignal, postVoice]);
+  }, [createConnection, dropConnection, handleSignal, postVoice]);
 
   const leave = useCallback(async () => {
     if (pollTimerRef.current !== null) {
@@ -234,16 +263,16 @@ export function useVoiceChat(serverId: string) {
     }
     connectionsRef.current.forEach((connection) => connection.close());
     connectionsRef.current.clear();
+    remoteStreamsRef.current.clear();
+    makingOfferRef.current.clear();
     pendingCandidatesRef.current.clear();
     pollingRef.current = false;
-    audioRef.current.forEach((audio) => {
-      audio.pause();
-      audio.srcObject = null;
-      audio.remove();
-    });
-    audioRef.current.clear();
+    setRemoteStreams(new Map());
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    localVideoTrackRef.current = null;
+    setLocalStream(null);
+    setCameraOn(false);
     peerIdRef.current = "";
     roomRef.current = null;
     lastSignalRef.current = 0;
@@ -267,6 +296,7 @@ export function useVoiceChat(serverId: string) {
       });
       const peerId = crypto.randomUUID();
       streamRef.current = stream;
+      setLocalStream(stream);
       peerIdRef.current = peerId;
       roomRef.current = channel;
       serverRef.current = serverId;
@@ -280,6 +310,7 @@ export function useVoiceChat(serverId: string) {
     } catch {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+      setLocalStream(null);
       roomRef.current = null;
       peerIdRef.current = "";
       setRoom(null);
@@ -296,6 +327,39 @@ export function useVoiceChat(serverId: string) {
     setMuted(next);
   }, [muted]);
 
+  const toggleCamera = useCallback(async () => {
+    if (!streamRef.current) return;
+    if (cameraOn) {
+      const track = localVideoTrackRef.current;
+      if (track) {
+        connectionsRef.current.forEach((connection) => {
+          const sender = connection.getSenders().find((item) => item.track === track);
+          if (sender) connection.removeTrack(sender);
+        });
+        streamRef.current.removeTrack(track);
+        track.stop();
+      }
+      localVideoTrackRef.current = null;
+      setCameraOn(false);
+      return;
+    }
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS });
+      const [track] = cameraStream.getVideoTracks();
+      if (!track || !streamRef.current) return;
+      track.onended = () => {
+        localVideoTrackRef.current = null;
+        setCameraOn(false);
+      };
+      localVideoTrackRef.current = track;
+      streamRef.current.addTrack(track);
+      connectionsRef.current.forEach((connection) => connection.addTrack(track, streamRef.current!));
+      setCameraOn(true);
+    } catch {
+      setError("Не удалось получить доступ к камере");
+    }
+  }, [cameraOn]);
+
   useEffect(() => {
     if (serverRef.current !== serverId && roomRef.current) void leave();
     serverRef.current = serverId;
@@ -305,5 +369,19 @@ export function useVoiceChat(serverId: string) {
     void leave();
   }, [leave]);
 
-  return { room, status, muted, participantCount, participants, error, join, leave, toggleMute };
+  return {
+    room,
+    status,
+    muted,
+    cameraOn,
+    participantCount,
+    participants,
+    localStream,
+    remoteStreams,
+    error,
+    join,
+    leave,
+    toggleMute,
+    toggleCamera,
+  };
 }

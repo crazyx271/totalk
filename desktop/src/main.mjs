@@ -94,10 +94,9 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
     return permission === "media" && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
   });
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     const sameOrigin = webContents.getURL().startsWith(TOTALK_ORIGIN);
-    const audioOnly = !details.mediaTypes || details.mediaTypes.every((type) => type === "audio");
-    callback(permission === "media" && sameOrigin && audioOnly);
+    callback(permission === "media" && sameOrigin);
   });
   createMenu();
   createWindow();

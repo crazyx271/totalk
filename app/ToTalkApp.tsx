@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import HomeHub from "./HomeHub";
+import VoiceCallOverlay from "./VoiceCallOverlay";
 import { useVoiceChat } from "./useVoiceChat";
 
 type Message = {
@@ -197,6 +198,21 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
         {liveMembers.map((member) => <button className="member" key={member.key}><span className={`avatar avatar-${member.avatar.charCodeAt(0) % 4}`}>{member.avatar}<i /></span><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
       </aside>
       {mobilePanel && <button className="scrim" onClick={() => setMobilePanel(null)} aria-label="Закрыть панель" />}
+      {voice.room && (
+        <VoiceCallOverlay
+          title={`♫ ${voice.room}`}
+          subtitle={voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}
+          selfName={user.displayName}
+          participants={voice.participants}
+          localStream={voice.localStream}
+          remoteStreams={voice.remoteStreams}
+          cameraOn={voice.cameraOn}
+          muted={voice.muted}
+          onToggleMute={voice.toggleMute}
+          onToggleCamera={voice.toggleCamera}
+          onLeave={() => void voice.leave()}
+        />
+      )}
     </main>
   );
 }

@@ -9,7 +9,7 @@ ToTalk — кроссплатформенное приложение для об
 - серверы, текстовые каналы и постоянная история сообщений;
 - поиск пользователей, заявки и список друзей;
 - личные сообщения;
-- голосовые комнаты и личные WebRTC-звонки;
+- голосовые комнаты и личные WebRTC-звонки с видео;
 - адаптивная браузерная версия;
 - desktop-клиент для Windows и macOS на Electron.
 
@@ -48,7 +48,7 @@ npm run start
 npm run dist:win
 ```
 
-Проект использует Vinext, Cloudflare D1, Drizzle ORM, Electron и WebRTC.
+Проект использует Vinext (сборка через Nitro/Node), SQLite (Drizzle ORM), Electron и WebRTC. Приложение — обычный Node-сервер, разворачивается на своём VDS, без привязки к облачному провайдеру.
 
 ## Голос в production
 
@@ -62,69 +62,78 @@ ToTalk уже умеет:
 - генерировать временные TURN credentials через `TURN_SECRET` для coturn REST auth.
 - отдавать healthcheck через [app/api/health/route.ts](app/api/health/route.ts).
 
-## Deploy v1
+## Deploy v1 — свой VDS
 
-Минимальный контур для первой версии:
+Минимальный контур для первой версии — один VDS под сайт и coturn.
 
-1. Развернуть веб-приложение на Cloudflare Workers с D1 binding `DB`.
-2. Применить миграции из папки `drizzle` к production D1.
-3. Задать `SITE_URL`, `TURN_URLS`, `TURN_SECRET` и `TURN_TTL_SECONDS`.
-4. Поднять coturn с тем же секретом, что и `TURN_SECRET`.
-5. Проверить `/api/health` после деплоя.
-6. Перед релизом запускать `npm run validate`.
+Ориентир по серверу (проверено на практике): Ubuntu 24.04/26.04, 2 vCPU, 4 ГБ RAM, 50 ГБ NVMe, канал от 1 Гбит/с (важно для видео — TURN-relay трафик может быть заметным), один публичный IP.
 
-### Быстрое подключение к Cloudflare
+1. Установить на сервере Node.js `>=22.13.0` и git.
+2. Склонировать репозиторий и выполнить `npm install`.
+3. Создать `.env` из [.env.example](.env.example): задать `SITE_URL`, `DATABASE_PATH`, `TURN_URLS`, `TURN_SECRET`, `TURN_TTL_SECONDS`.
+4. Применить миграции к SQLite: `npm run db:migrate`.
+5. Собрать приложение: `npm run build`.
+6. Запустить как systemd-сервис (см. ниже) и поднять обратный прокси с TLS.
+7. Поднять coturn с тем же секретом, что и `TURN_SECRET` (см. ниже).
+8. Проверить `/api/health` после деплоя.
+9. Перед релизом запускать `npm run validate`.
 
-1. Войдите в Cloudflare CLI:
+### Systemd-сервис
 
-```bash
-npx wrangler login
+Создайте `/etc/systemd/system/totalk.service`:
+
+```ini
+[Unit]
+Description=ToTalk web app
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/totalk
+EnvironmentFile=/opt/totalk/.env
+Environment=PORT=3000
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+User=totalk
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-2. Создайте production D1:
-
 ```bash
-npx wrangler d1 create totalk-prod
+sudo systemctl daemon-reload
+sudo systemctl enable --now totalk
+sudo journalctl -u totalk -f
 ```
 
-3. Скопируйте `database_id` из ответа и вставьте его в [wrangler.jsonc](wrangler.jsonc) вместо `REPLACE_WITH_D1_DATABASE_ID`.
+### Обратный прокси и TLS (Caddy)
 
-4. Отредактируйте в [wrangler.jsonc](wrangler.jsonc) значения:
+Статику (`/assets/*`) отдаёт сам Caddy напрямую с диска — быстрее, чем гонять через Node, и не зависит от особенностей раздачи статики в самом сервере:
+
+```
+your-domain.example {
+  root * /opt/totalk/dist/standalone/dist/client
+  @assets path /assets/*
+  handle @assets {
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+  handle {
+    reverse_proxy localhost:3000
+  }
+}
+```
+
+Caddy сам получит и обновит сертификат Let's Encrypt. После первого запуска проверьте:
 
 ```txt
-SITE_URL=https://app.your-domain.example
-TURN_URLS=turn:turn.your-domain.example:3478?transport=udp,turn:turn.your-domain.example:3478?transport=tcp
-TURN_TTL_SECONDS=3600
-```
-
-5. Задайте TURN secret:
-
-```bash
-npx wrangler secret put TURN_SECRET
-```
-
-6. Примените D1-миграции:
-
-```bash
-npm run cf:d1:migrate
-```
-
-7. Задеплойте приложение:
-
-```bash
-npm run cf:deploy
-```
-
-8. После деплоя привяжите custom domain `app.your-domain.example` к worker в панели Cloudflare и проверьте:
-
-```txt
-https://app.your-domain.example/api/health
+https://your-domain.example/api/health
 ```
 
 Для desktop-клиента задайте:
 
 ```txt
-TOTALK_URL=https://app.your-domain.example/
+TOTALK_URL=https://your-domain.example/
 ```
 
 ### Обязательные переменные для голоса
@@ -178,3 +187,24 @@ NAT это механизм, при котором много устройств
 4. TURN в этом случае становится промежуточным relay, через который проходит аудио.
 
 Итог простой: без TURN звонки будут работать только у части пользователей. Для полноценного продукта TURN обязателен.
+
+Видео тяжелее аудио на порядок: одна камера — это уже сотни кбит/с - несколько мбит/с на пир, а схема соединений в ToTalk сейчас mesh (каждый со всеми). Для небольших комнат (звонок 1:1, компания из нескольких друзей) это нормально. Если понадобятся комнаты с большим числом одновременно включённых камер, потребуется SFU — mesh перестаёт масштабироваться. Также заложите в coturn запас по трафику: `total-quota=0` и `bps-capacity=0` из рекомендованной схемы ниже уже снимают лимиты, но сам сервер должен физически тянуть исходящий видеотрафик relay.
+
+## Тестовый контур перед продакшеном
+
+Прежде чем катить новые голос/видео изменения на прод, поднимите тот же контур на отдельном небольшом VDS (или отдельный systemd-сервис + отдельный сайт в Caddyfile + свой `DATABASE_PATH`/поддомен на том же сервере, если второй VDS не нужен) — так ничего не заденет продакшен-базу и продакшен-пользователей.
+
+1. Повторите шаги из раздела «Deploy v1» выше: `.env` со своим `SITE_URL` (тестовый (под)домен) и своим `DATABASE_PATH` (например, `/opt/totalk-test/data/totalk.sqlite`), `npm run db:migrate`, `npm run build`.
+2. TURN можно переиспользовать тот же coturn, что и в проде, если для теста достаточно одного relay — секрет `TURN_SECRET` тогда просто совпадает в обоих `.env`.
+3. Заведите отдельный systemd-юнит (`totalk-test.service`) и отдельный блок в Caddyfile на тестовый (под)домен.
+4. Проверьте `https://<test-domain>/api/health`.
+
+### Чек-лист ручной проверки голоса и видео
+
+- Два разных аккаунта-друга, звонок 1:1: включить камеру с обеих сторон, убедиться что видно оба потока и работает mute.
+- Выключить камеру во время звонка — собеседник должен увидеть, что видео пропало, звук должен продолжать идти.
+- Тот же сценарий в общем голосовом канале ToTalk с 2-3 вкладками.
+- Проверить звонок между двумя разными сетями (например, мобильный интернет + Wi-Fi), чтобы убедиться, что TURN relay реально работает, а не только прямой P2P в одной сети.
+- Desktop-клиент (`cd desktop && npm run start` с `TOTALK_URL`, указывающим на тестовый сервер): убедиться, что запрос доступа к камере больше не блокируется.
+
+После успешной проверки на тестовом контуре повторите шаги деплоя для продакшена (см. раздел «Deploy v1» выше).
