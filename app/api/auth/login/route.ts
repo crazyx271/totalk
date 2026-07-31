@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Неверный логин или пароль" }, { status: 401 });
   }
 
-  const session = await createSession(record.id);
+  const session = await createSession(record.id, request);
   return Response.json({
     user: { id: record.id, username: record.username, displayName: record.displayName },
   }, { headers: { "set-cookie": session.cookie } });

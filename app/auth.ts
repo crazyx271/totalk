@@ -64,14 +64,29 @@ function readCookie(request: Request, name: string) {
   return null;
 }
 
-export async function createSession(userId: number) {
+// Behind a reverse proxy (Caddy), the request Node sees is always plain
+// HTTP — the public-facing protocol lives in X-Forwarded-Proto. A cookie
+// marked Secure over an actually-plain-HTTP deployment (e.g. bare-IP
+// testing before a domain/TLS is set up) gets silently dropped by the
+// browser, breaking every authenticated request after login.
+function isSecureRequest(request: Request) {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedProto) return forwardedProto.split(",")[0].trim() === "https";
+  return new URL(request.url).protocol === "https:";
+}
+
+function sessionCookieAttributes(request: Request) {
+  return `Path=/; HttpOnly;${isSecureRequest(request) ? " Secure;" : ""} SameSite=Lax`;
+}
+
+export async function createSession(userId: number, request: Request) {
   const token = randomHex(32);
   const tokenHash = await hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000).toISOString();
   await getDb().insert(sessions).values({ userId, tokenHash, expiresAt });
   return {
     token,
-    cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`,
+    cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}; ${sessionCookieAttributes(request)}; Max-Age=${SESSION_DAYS * 86400}`,
   };
 }
 
@@ -97,5 +112,5 @@ export async function deleteSession(request: Request) {
   if (token) {
     await getDb().delete(sessions).where(eq(sessions.tokenHash, await hashSessionToken(token)));
   }
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+  return `${SESSION_COOKIE}=; ${sessionCookieAttributes(request)}; Max-Age=0`;
 }

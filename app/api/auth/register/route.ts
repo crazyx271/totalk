@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     passwordSalt: credentials.salt,
   }).returning({ id: users.id, username: users.username, displayName: users.displayName });
 
-  const session = await createSession(user.id);
+  const session = await createSession(user.id, request);
   return Response.json({ user }, {
     status: 201,
     headers: { "set-cookie": session.cookie },
