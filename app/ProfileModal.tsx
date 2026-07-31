@@ -3,6 +3,7 @@
 import { FormEvent, useRef, useState } from "react";
 import type { ToTalkUser } from "./page";
 import Avatar from "./Avatar";
+import { EditIcon, XIcon } from "./Icons";
 
 export default function ProfileModal({
   user,
@@ -90,9 +91,9 @@ export default function ProfileModal({
 
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header"><b>Профиль</b><button onClick={onClose} aria-label="Закрыть">×</button></div>
-        <div className="profile-avatar-row">
+      <div className="modal-card profile-card" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="Закрыть"><XIcon /></button>
+        <div className="profile-banner">
           <button
             type="button"
             className="profile-avatar-edit"
@@ -101,22 +102,25 @@ export default function ProfileModal({
             aria-label="Загрузить фото профиля"
           >
             <Avatar name={displayName} avatarPath={avatarPath} className="avatar self profile-avatar-large" />
-            <span className="profile-avatar-edit-label">{uploadingAvatar ? "…" : "✎"}</span>
+            <span className="profile-avatar-edit-label">{uploadingAvatar ? "…" : <EditIcon />}</span>
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void uploadAvatar(file);
-              event.target.value = "";
-            }}
-          />
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void uploadAvatar(file);
+            event.target.value = "";
+          }}
+        />
+        <div className="profile-identity">
+          <div><b>{displayName || user.displayName}</b><small>@{username || user.username}</small></div>
           {avatarPath && <button type="button" className="profile-avatar-remove" onClick={() => void removeAvatar()} disabled={uploadingAvatar}>Удалить фото</button>}
         </div>
-        <form onSubmit={save}>
+        <form className="profile-form" onSubmit={save}>
           <label>Отображаемое имя<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} minLength={2} maxLength={32} required /></label>
           <label>Логин<input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={24} required /></label>
           <div className="modal-divider">Смена пароля (необязательно)</div>
