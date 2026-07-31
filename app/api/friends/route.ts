@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, ne, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { friendships, users } from "../../../db/schema";
@@ -42,11 +42,18 @@ export async function GET(request: Request) {
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 32) ?? "";
   let results: Array<{ id: number; username: string; displayName: string }> = [];
   if (query.length >= 2) {
+    // SQLite's LIKE only case-folds ASCII, so match on an explicit lower()
+    // (overridden to be Unicode-aware in db/index.ts) instead of relying on
+    // LIKE's built-in folding — otherwise Cyrillic search misses case variants.
+    const needle = `%${query.toLowerCase()}%`;
     results = await db.select({ id: users.id, username: users.username, displayName: users.displayName })
       .from(users)
       .where(and(
         ne(users.id, currentUser.id),
-        or(like(users.username, `%${query}%`), like(users.displayName, `%${query}%`)),
+        or(
+          sql`lower(${users.username}) LIKE ${needle}`,
+          sql`lower(${users.displayName}) LIKE ${needle}`,
+        ),
       ))
       .limit(20);
   }

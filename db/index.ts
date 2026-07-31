@@ -18,6 +18,11 @@ export function getDb() {
   const sqlite = new Database(path);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  // SQLite's built-in lower()/LIKE case-folding only covers ASCII, so
+  // Cyrillic search (e.g. friend lookup) silently misses case variants.
+  // Override lower() with a Unicode-aware implementation.
+  sqlite.function("lower", { deterministic: true }, (value) =>
+    typeof value === "string" ? value.toLowerCase() : value);
   db = drizzle(sqlite, { schema });
   return db;
 }
