@@ -5,6 +5,12 @@
 html, body { margin:0; min-height:100%; overflow:hidden; background:#111216; color:var(--ink); font-family:var(--font-geist), Inter, system-ui, sans-serif; }
 button, input { font:inherit; }
 button { color:inherit; }
+button:not(:disabled){transition:transform .12s ease,filter .12s ease,background-color .15s ease,box-shadow .15s ease}
+button:not(:disabled):hover{filter:brightness(1.08)}
+button:not(:disabled):active{transform:scale(.94)}
+@keyframes messageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.message,.dm-message{animation:messageIn .22s ease}
+.composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #7c6cf221,0 6px 20px #0002}
 .app-shell { height:100dvh; display:grid; grid-template-columns:72px 258px minmax(360px,1fr) 238px; background:var(--chat); overflow:hidden; }
 .server-rail { background:#111216; display:flex; flex-direction:column; align-items:center; gap:10px; padding:12px 0; z-index:5; }
 .server-slot{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}.server-slot:has(.active):before{content:"";position:absolute;left:-13px;top:8px;width:4px;height:30px;border-radius:0 4px 4px 0;background:#fff}
@@ -43,7 +49,14 @@ button { color:inherit; }
 .social-empty{text-align:center;padding:50px 15px;color:#848795}.social-empty b{color:#ddd;font-size:18px}.social-empty p{margin:8px 0 18px}.social-empty button,.add-section form button{border:0;background:#6d5ce8;color:#fff;border-radius:8px;padding:10px 16px;cursor:pointer}.add-section>p{color:#8f92a1}.add-section form{display:flex;gap:8px;margin:18px 0}.add-section form input{flex:1;border:1px solid #3a3c46;background:#17181d;color:#fff;border-radius:9px;padding:12px 14px;outline:none}.add-section form input:focus{border-color:#7567df}.social-notice{margin:10px 0;padding:10px 12px;background:#292b33;border-radius:8px;color:#aeb1bf;font-size:12px}
 .dm-header>span:nth-of-type(2){display:flex;flex-direction:column}.dm-header small{color:#7d808e;font-size:10px}.dm-back{display:none;border:0;background:transparent;color:#bbb;font-size:26px;cursor:pointer}.call-button{margin-left:auto;border:0;background:#347c5b;color:#fff;border-radius:9px;padding:9px 14px;cursor:pointer}.call-button:disabled{opacity:.5}
 .dm-messages{flex:1;overflow:auto;padding:22px}.dm-intro{margin-top:auto;padding:70px 10px 25px}.dm-intro h2{margin:14px 0 4px}.dm-intro p{color:#8f92a1}.dm-message{display:flex;gap:10px;padding:9px 6px}.dm-message:hover{background:#ffffff05}.dm-message>div{min-width:0}.dm-message b{font-size:13px}.dm-message time{font-size:10px;color:#717483;margin-left:8px}.dm-message p{margin:3px 0 0;color:#d0d1d8;white-space:pre-wrap;overflow-wrap:anywhere}.dm-message.mine b{color:#a89df7}
-.dm-composer{margin:0 22px 20px;display:flex;background:#303139;border-radius:11px;overflow:hidden}.dm-composer input{flex:1;border:0;background:transparent;color:#fff;padding:14px;outline:none}.dm-composer button{width:48px;border:0;background:#6d5ce8;color:#fff;font-size:20px;cursor:pointer}.dm-composer button:disabled{opacity:.35}
+.dm-composer{margin:0 22px 20px;display:flex;background:#303139;border-radius:11px;overflow:hidden;transition:box-shadow .2s ease}.dm-composer input{flex:1;border:0;background:transparent;color:#fff;padding:14px;outline:none}.dm-composer button{width:48px;border:0;background:#6d5ce8;color:#fff;font-size:20px;cursor:pointer}.dm-composer button:disabled{opacity:.35}.dm-composer:focus-within{box-shadow:0 0 0 3px #7c6cf221}
+.dm-composer .sticker-anchor button{background:transparent;color:#c9cad3}
+.sticker-anchor{position:relative;display:flex}
+.sticker-picker{position:absolute;bottom:calc(100% + 10px);left:0;display:grid;grid-template-columns:repeat(5,38px);gap:4px;background:#22232b;border:1px solid #3a3b46;border-radius:12px;padding:10px;box-shadow:0 14px 34px #0006;z-index:5;animation:stickerPopIn .15s ease}
+.sticker-picker button{width:38px;height:38px;font-size:22px;border:0;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sticker-picker button:hover{background:#33343d}
+.sticker-bubble{font-size:44px;line-height:1.15;display:inline-block;margin-top:4px}
+@keyframes stickerPopIn{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
 .call-toast{position:fixed;right:24px;top:24px;z-index:20;display:flex;align-items:center;gap:12px;width:min(390px,calc(100vw - 32px));padding:15px;border:1px solid #ffffff18;border-radius:16px;background:#1d1f26;box-shadow:0 24px 70px #0008}.call-toast>div{display:flex;flex-direction:column;flex:1}.call-toast small{font-size:9px;color:#62d79c;letter-spacing:.1em}.call-toast button{border:0;border-radius:10px;padding:9px 12px;color:#fff;cursor:pointer}.accept-call{background:#31895f}.decline-call{background:#bc4056!important}
 .voice-pulse{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#6555bd;font-weight:800;box-shadow:0 0 0 5px #62d79c1c;flex:none}
 

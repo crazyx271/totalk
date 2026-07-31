@@ -3,7 +3,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import HomeHub from "./HomeHub";
 import VoiceCallOverlay from "./VoiceCallOverlay";
+import StickerPicker from "./StickerPicker";
 import { useVoiceChat } from "./useVoiceChat";
+import type { Sticker } from "./stickers";
 
 type Message = {
   id: number;
@@ -13,6 +15,7 @@ type Message = {
   avatar: string;
   time: string;
   text: string;
+  kind: string;
   mine?: boolean;
 };
 
@@ -43,6 +46,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   const [connection, setConnection] = useState<"loading" | "online" | "error">("loading");
   const [sending, setSending] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"channels" | "members" | null>(null);
+  const [showStickers, setShowStickers] = useState(false);
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
   const voice = useVoiceChat(workspace.id);
 
@@ -52,7 +56,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
       const response = await fetch(`/api/messages?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("messages unavailable");
       const data = await response.json() as {
-        messages: Array<{ id: number; userId: number; author: string; username: string; text: string; createdAt: string }>;
+        messages: Array<{ id: number; userId: number; author: string; username: string; text: string; kind: string; createdAt: string }>;
       };
       setMessages(data.messages.map((message) => ({
         id: message.id,
@@ -62,6 +66,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
         avatar: message.author.trim().charAt(0).toUpperCase() || "?",
         time: new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }).format(new Date(`${message.createdAt}Z`)),
         text: message.text,
+        kind: message.kind,
         mine: message.userId === user.id,
       })));
       setConnection("online");
@@ -100,6 +105,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
       avatar: user.displayName.charAt(0).toUpperCase() || "В",
       time: date.format(new Date()),
       text,
+      kind: "text",
       mine: true,
     }]);
     try {
@@ -116,6 +122,34 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
       setConnection("error");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function sendSticker(sticker: Sticker) {
+    setShowStickers(false);
+    const temporaryId = -Date.now();
+    setMessages((current) => [...current, {
+      id: temporaryId,
+      userId: user.id,
+      author: user.displayName,
+      username: user.username,
+      avatar: user.displayName.charAt(0).toUpperCase() || "В",
+      time: date.format(new Date()),
+      text: sticker,
+      kind: "sticker",
+      mine: true,
+    }]);
+    try {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ serverId: workspace.id, channel, text: sticker, kind: "sticker" }),
+      });
+      if (!response.ok) throw new Error("send failed");
+      await loadMessages();
+    } catch {
+      setMessages((current) => current.filter((message) => message.id !== temporaryId));
+      setConnection("error");
     }
   }
 
@@ -180,16 +214,23 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
           <div className="channel-intro"><div>#</div><h1>Добро пожаловать в #{channel}!</h1><p>Это начало канала #{channel}.</p></div>
           <div className="day-divider"><span>Сегодня</span></div>
           {messages.map((message) => (
-            <article className={`message ${message.mine ? "mine" : ""}`} key={message.id}>
+            <article className={`message ${message.mine ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
               <span className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`}>{message.avatar}</span>
-              <div><div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div><p>{message.text}</p></div>
+              <div>
+                <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>
+                {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
+              </div>
             </article>
           ))}
         </div>
         <form className="composer" onSubmit={sendMessage}>
           <button type="button" aria-label="Добавить">+</button>
           <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Написать #${channel}`} aria-label="Сообщение" />
-          <button type="button" aria-label="Эмодзи">☺</button><button className="send" aria-label="Отправить" disabled={sending}>↑</button>
+          <div className="sticker-anchor">
+            <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}>☺</button>
+            {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
+          </div>
+          <button className="send" aria-label="Отправить" disabled={sending}>↑</button>
         </form>
       </section>
 

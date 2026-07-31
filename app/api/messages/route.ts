@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { messages, users } from "../../../db/schema";
+import { isSticker } from "../../stickers";
 
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
       author: users.displayName,
       username: users.username,
       text: messages.content,
+      kind: messages.kind,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -44,21 +46,23 @@ export async function POST(request: Request) {
     serverId?: string;
     channel?: string;
     text?: string;
+    kind?: string;
   };
   const serverId = payload.serverId?.trim().slice(0, 40) ?? "";
   const channel = payload.channel?.trim().slice(0, 80) ?? "";
   const text = payload.text?.trim() ?? "";
+  const kind = payload.kind === "sticker" ? "sticker" : "text";
   if (!serverId || !channel || !text) {
     return Response.json({ error: "Сообщение пустое" }, { status: 400 });
   }
-  if (text.length > MAX_MESSAGE_LENGTH) {
-    return Response.json({ error: "Сообщение слишком длинное" }, { status: 400 });
+  if (kind === "sticker" ? !isSticker(text) : text.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: kind === "sticker" ? "Неизвестный стикер" : "Сообщение слишком длинное" }, { status: 400 });
   }
 
   const [message] = await getDb()
     .insert(messages)
-    .values({ userId: user.id, serverId, channel, content: text })
-    .returning({ id: messages.id, text: messages.content, createdAt: messages.createdAt });
+    .values({ userId: user.id, serverId, channel, content: text, kind })
+    .returning({ id: messages.id, text: messages.content, kind: messages.kind, createdAt: messages.createdAt });
 
   return Response.json({
     message: { ...message, userId: user.id, author: user.displayName, username: user.username },

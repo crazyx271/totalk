@@ -3,7 +3,9 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { ToTalkUser } from "./page";
 import VoiceCallOverlay from "./VoiceCallOverlay";
+import StickerPicker from "./StickerPicker";
 import { useVoiceChat } from "./useVoiceChat";
+import type { Sticker } from "./stickers";
 
 type Friend = {
   id: number;
@@ -19,6 +21,7 @@ type DirectMessage = {
   author: string;
   username: string;
   text: string;
+  kind: string;
   createdAt: string;
 };
 
@@ -57,6 +60,7 @@ export default function HomeHub({
   const [searched, setSearched] = useState(false);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [showStickers, setShowStickers] = useState(false);
   const [notice, setNotice] = useState("");
   const [incomingCall, setIncomingCall] = useState<DirectCall | null>(null);
   const [activeCall, setActiveCall] = useState<DirectCall | null>(null);
@@ -168,6 +172,17 @@ export default function HomeHub({
     await loadMessages();
   }
 
+  async function sendSticker(sticker: Sticker) {
+    if (!selectedFriend) return;
+    setShowStickers(false);
+    await fetch("/api/direct-messages", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ friendId: selectedFriend.id, text: sticker, kind: "sticker" }),
+    });
+    await loadMessages();
+  }
+
   async function startCall(friend: Friend) {
     const response = await fetch("/api/calls", {
       method: "POST",
@@ -269,14 +284,21 @@ export default function HomeHub({
             <div className="dm-messages">
               {messages.length === 0 && <div className="dm-intro"><span className="friend-avatar large">{selectedFriend.displayName.charAt(0).toUpperCase()}</span><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
               {messages.map((message) => (
-                <article className={`dm-message ${message.senderId === user.id ? "mine" : ""}`} key={message.id}>
+                <article className={`dm-message ${message.senderId === user.id ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
                   <span className="friend-avatar small">{message.author.charAt(0).toUpperCase()}</span>
-                  <div><b>{message.author}</b><time>{time.format(new Date(`${message.createdAt}Z`))}</time><p>{message.text}</p></div>
+                  <div>
+                    <b>{message.author}</b><time>{time.format(new Date(`${message.createdAt}Z`))}</time>
+                    {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
+                  </div>
                 </article>
               ))}
             </div>
             <form className="dm-composer" onSubmit={sendMessage}>
               <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Сообщение для @${selectedFriend.username}`} />
+              <div className="sticker-anchor">
+                <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}>☺</button>
+                {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
+              </div>
               <button disabled={!draft.trim()} aria-label="Отправить">↑</button>
             </form>
           </>
