@@ -54,6 +54,7 @@ export default function HomeHub({
   const [section, setSection] = useState<"friends" | "pending" | "add">("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [search, setSearch] = useState("");
+  const [searched, setSearched] = useState(false);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
@@ -74,6 +75,13 @@ export default function HomeHub({
       current ? data.friends.find((friend) => friend.id === current.id) ?? null : current,
     );
   }, []);
+
+  const searchFriends = useCallback(async (query: string) => {
+    setSelectedFriend(null);
+    setSection("add");
+    setSearched(query.trim().length >= 2);
+    await loadSocial(query);
+  }, [loadSocial]);
 
   const loadMessages = useCallback(async () => {
     if (!selectedFriend) {
@@ -214,7 +222,19 @@ export default function HomeHub({
       </nav>
 
       <aside className="home-sidebar">
-        <div className="home-search">⌕ Найти диалог</div>
+        <form className="home-search" onSubmit={(event) => { event.preventDefault(); void searchFriends(search); }}>
+          <span aria-hidden="true">⌕</span>
+          <input
+            value={search}
+            onChange={(event) => {
+              const value = event.target.value;
+              setSearch(value);
+              if (value.trim().length < 2) setSearched(false);
+            }}
+            placeholder="Найти диалог"
+            aria-label="Найти диалог по имени или логину"
+          />
+        </form>
         <button className={`home-nav ${!selectedFriend ? "active" : ""}`} onClick={() => setSelectedFriend(null)}>☺ Друзья</button>
         <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); }}>+</button></div>
         <div className="dm-list">
@@ -287,12 +307,15 @@ export default function HomeHub({
               </section>}
 
               {section === "add" && <section className="friends-section add-section"><h2>Добавить друга</h2><p>Найдите человека по отображаемому имени или точному логину.</p>
-                <form onSubmit={(event) => { event.preventDefault(); void loadSocial(search); }}>
-                  <input value={search} onChange={(event) => setSearch(event.target.value)} minLength={2} placeholder="Введите имя или логин" />
+                <form onSubmit={(event) => { event.preventDefault(); void searchFriends(search); }}>
+                  <input value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value.trim().length < 2) setSearched(false); }} minLength={2} placeholder="Введите имя или логин" />
                   <button>Найти</button>
                 </form>
                 {notice && <div className="social-notice">{notice}</div>}
                 {social.results.map((friend) => renderPerson(friend, <button className="accept" onClick={() => void socialAction("request", friend)}>Добавить</button>))}
+                {searched && social.results.length === 0 && (
+                  <div className="social-empty"><b>Никого не нашли</b><p>Проверьте логин или имя — попробуйте другой запрос.</p></div>
+                )}
               </section>}
             </div>
           </>
