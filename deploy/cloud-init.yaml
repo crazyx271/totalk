@@ -6,6 +6,10 @@ packages:
   - git
   - ufw
   - curl
+  # build-essential/python3: better-sqlite3 needs these to compile its
+  # native binding via node-gyp when no matching prebuild is available.
+  - build-essential
+  - python3
 
 runcmd:
   # Node.js 22.x
