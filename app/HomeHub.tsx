@@ -9,6 +9,8 @@ import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
+import { CheckIcon, ChevronLeftIcon, LogOutIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { PhoneOffIcon } from "./CallIcons";
 
 type Friend = {
   id: number;
@@ -274,7 +276,7 @@ export default function HomeHub({
 
       <aside className="home-sidebar">
         <form className="home-search" onSubmit={(event) => { event.preventDefault(); void searchFriends(search); }}>
-          <span aria-hidden="true">⌕</span>
+          <SearchIcon />
           <input
             value={search}
             onChange={(event) => {
@@ -286,8 +288,8 @@ export default function HomeHub({
             aria-label="Найти диалог по имени или логину"
           />
         </form>
-        <button className={`home-nav ${!selectedFriend ? "active" : ""}`} onClick={() => setSelectedFriend(null)}>☺ Друзья</button>
-        <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); }}>+</button></div>
+        <button className={`home-nav ${!selectedFriend ? "active" : ""}`} onClick={() => setSelectedFriend(null)}><UsersIcon /><span>Друзья</span></button>
+        <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); }} aria-label="Добавить друга"><PlusIcon /></button></div>
         <div className="dm-list">
           {social.friends.map((friend) => (
             <button className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id} onClick={() => setSelectedFriend(friend)}>
@@ -302,7 +304,7 @@ export default function HomeHub({
             <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar>
             <span><b>{user.displayName}</b><small>@{user.username}</small></span>
           </button>
-          <button onClick={() => void onLogout()} aria-label="Выйти">↪</button>
+          <button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button>
         </div>
       </aside>
       {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
@@ -311,10 +313,10 @@ export default function HomeHub({
         {selectedFriend ? (
           <>
             <header className="dm-header">
-              <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад">‹</button>
+              <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад"><ChevronLeftIcon /></button>
               <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
               <span><b>{selectedFriend.displayName}</b><small>@{selectedFriend.username}</small></span>
-              <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}>☎ Позвонить</button>
+              <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}><PhoneIcon /><span>Позвонить</span></button>
             </header>
             <div className="dm-messages">
               {messages.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
@@ -331,15 +333,15 @@ export default function HomeHub({
             <form className="dm-composer" onSubmit={sendMessage}>
               <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Сообщение для @${selectedFriend.username}`} />
               <div className="sticker-anchor">
-                <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}>☺</button>
+                <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
                 {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
               </div>
-              <button disabled={!draft.trim()} aria-label="Отправить">↑</button>
+              <button disabled={!draft.trim()} aria-label="Отправить"><SendIcon /></button>
             </form>
           </>
         ) : (
           <>
-            <header className="friends-header"><b>☺ Друзья</b><span />
+            <header className="friends-header"><UsersIcon /><b>Друзья</b><span />
               <button className={section === "friends" ? "active" : ""} onClick={() => setSection("friends")}>Все</button>
               <button className={section === "pending" ? "active" : ""} onClick={() => setSection("pending")}>Заявки {social.incoming.length > 0 && <em>{social.incoming.length}</em>}</button>
               <button className="add-friend" onClick={() => setSection("add")}>Добавить друга</button>
@@ -352,16 +354,16 @@ export default function HomeHub({
 
               {section === "friends" && <section className="friends-section"><h2>Все друзья — {social.friends.length}</h2>
                 {social.friends.map((friend) => renderPerson(friend, <>
-                  <button onClick={() => setSelectedFriend(friend)} aria-label="Написать">✉</button>
-                  <button onClick={() => void startCall(friend)} aria-label="Позвонить">☎</button>
+                  <button onClick={() => setSelectedFriend(friend)} aria-label="Написать"><MessageIcon /></button>
+                  <button onClick={() => void startCall(friend)} aria-label="Позвонить"><PhoneIcon /></button>
                 </>))}
                 {social.friends.length === 0 && <div className="social-empty"><b>Список друзей пока пуст</b><p>Найдите пользователя по имени или логину и отправьте заявку.</p><button onClick={() => setSection("add")}>Найти друзей</button></div>}
               </section>}
 
               {section === "pending" && <section className="friends-section"><h2>Входящие заявки — {social.incoming.length}</h2>
                 {social.incoming.map((friend) => renderPerson(friend, <>
-                  <button className="accept" onClick={() => void socialAction("accept", friend)} aria-label="Принять">✓</button>
-                  <button onClick={() => void socialAction("decline", friend)} aria-label="Отклонить">×</button>
+                  <button className="accept" onClick={() => void socialAction("accept", friend)} aria-label="Принять"><CheckIcon /></button>
+                  <button onClick={() => void socialAction("decline", friend)} aria-label="Отклонить"><XIcon /></button>
                 </>))}
                 {social.outgoing.length > 0 && <><h2>Отправленные — {social.outgoing.length}</h2>{social.outgoing.map((friend) => renderPerson(friend, <button onClick={() => void socialAction("decline", friend)}>Отменить</button>))}</>}
                 {social.incoming.length + social.outgoing.length === 0 && <div className="social-empty"><b>Новых заявок нет</b><p>Когда кто-то добавит вас, заявка появится здесь.</p></div>}
@@ -370,7 +372,7 @@ export default function HomeHub({
               {section === "add" && <section className="friends-section add-section"><h2>Добавить друга</h2><p>Найдите человека по отображаемому имени или точному логину.</p>
                 <form onSubmit={(event) => { event.preventDefault(); void searchFriends(search); }}>
                   <input value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value.trim().length < 2) setSearched(false); }} minLength={2} placeholder="Введите имя или логин" />
-                  <button>Найти</button>
+                  <button><SearchIcon /><span>Найти</span></button>
                 </form>
                 {notice && <div className="social-notice">{notice}</div>}
                 {social.results.map((friend) => renderPerson(friend, <button className="accept" onClick={() => void socialAction("request", friend)}>Добавить</button>))}
@@ -386,8 +388,8 @@ export default function HomeHub({
       {incomingCall && <div className="call-toast">
         <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} className="friend-avatar" />
         <div><small>ВХОДЯЩИЙ ЗВОНОК</small><b>{incomingCall.person.displayName}</b></div>
-        <button className="accept-call" onClick={() => void acceptCall(incomingCall)}>☎</button>
-        <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")}>×</button>
+        <button className="accept-call" onClick={() => void acceptCall(incomingCall)} aria-label="Принять звонок"><PhoneIcon /></button>
+        <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")} aria-label="Отклонить звонок"><PhoneOffIcon /></button>
       </div>}
       {activeCall && (
         <VoiceCallOverlay

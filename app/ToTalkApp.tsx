@@ -9,6 +9,8 @@ import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import type { Sticker } from "./stickers";
 import type { ToTalkUser } from "./page";
+import { LogOutIcon, MenuIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon } from "./Icons";
+import { MicIcon, MicOffIcon, PhoneOffIcon } from "./CallIcons";
 
 type Message = {
   id: number;
@@ -205,15 +207,15 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
           {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
-        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
+        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? <MicOffIcon /> : <MicIcon />}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал"><PhoneOffIcon /></button></>}<button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button></div>
         {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
       </aside>
 
       <section className="chat-panel">
         <header className="chat-header">
-          <button className="mobile-menu" onClick={() => setMobilePanel(mobilePanel === "channels" ? null : "channels")} aria-label="Открыть каналы">☰</button>
+          <button className="mobile-menu" onClick={() => setMobilePanel(mobilePanel === "channels" ? null : "channels")} aria-label="Открыть каналы"><MenuIcon /></button>
           <span className="hash">#</span><b>{channel}</b><span className="header-divider" /><small>Общайтесь, делитесь идеями и будьте на связи</small>
-          <div className="header-actions"><button aria-label="Звонок">☎</button><button aria-label="Поиск">⌕</button><button onClick={() => setMobilePanel(mobilePanel === "members" ? null : "members")} aria-label="Участники">☷</button></div>
+          <div className="header-actions"><button aria-label="Поиск"><SearchIcon /></button><button onClick={() => setMobilePanel(mobilePanel === "members" ? null : "members")} aria-label="Участники"><UsersIcon /></button></div>
         </header>
 
         <div className="message-scroll">
@@ -230,13 +232,13 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           ))}
         </div>
         <form className="composer" onSubmit={sendMessage}>
-          <button type="button" aria-label="Добавить">+</button>
+          <button type="button" aria-label="Добавить"><PlusIcon /></button>
           <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Написать #${channel}`} aria-label="Сообщение" />
           <div className="sticker-anchor">
-            <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}>☺</button>
+            <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
             {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
           </div>
-          <button className="send" aria-label="Отправить" disabled={sending}>↑</button>
+          <button className="send" aria-label="Отправить" disabled={sending}><SendIcon /></button>
         </form>
       </section>
 
