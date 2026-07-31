@@ -43,6 +43,7 @@ export function useVoiceChat(serverId: string) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -274,6 +275,7 @@ export function useVoiceChat(serverId: string) {
     localVideoTrackRef.current = null;
     setLocalStream(null);
     setCameraOn(false);
+    setScreenSharing(false);
     peerIdRef.current = "";
     roomRef.current = null;
     lastSignalRef.current = 0;
@@ -333,38 +335,53 @@ export function useVoiceChat(serverId: string) {
     setMuted(next);
   }, [muted]);
 
-  const toggleCamera = useCallback(async () => {
-    if (!streamRef.current) return;
-    if (cameraOn) {
-      const track = localVideoTrackRef.current;
-      if (track) {
-        connectionsRef.current.forEach((connection) => {
-          const sender = connection.getSenders().find((item) => item.track === track);
-          if (sender) connection.removeTrack(sender);
-        });
-        streamRef.current.removeTrack(track);
-        track.stop();
-      }
-      localVideoTrackRef.current = null;
-      setCameraOn(false);
-      return;
+  // Camera and screen share both occupy the single outgoing video slot —
+  // starting one stops the other, mirroring how most call apps only send
+  // one video feed at a time over a mesh connection.
+  const stopVideoTrack = useCallback(() => {
+    const track = localVideoTrackRef.current;
+    if (track) {
+      connectionsRef.current.forEach((connection) => {
+        const sender = connection.getSenders().find((item) => item.track === track);
+        if (sender) connection.removeTrack(sender);
+      });
+      streamRef.current?.removeTrack(track);
+      track.stop();
     }
+    localVideoTrackRef.current = null;
+    setCameraOn(false);
+    setScreenSharing(false);
+  }, []);
+
+  const startVideoTrack = useCallback(async (source: "camera" | "screen") => {
+    if (!streamRef.current) return;
+    stopVideoTrack();
     try {
-      const cameraStream = await navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS });
-      const [track] = cameraStream.getVideoTracks();
+      const mediaStream = source === "camera"
+        ? await navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS })
+        : await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const [track] = mediaStream.getVideoTracks();
       if (!track || !streamRef.current) return;
-      track.onended = () => {
-        localVideoTrackRef.current = null;
-        setCameraOn(false);
-      };
+      track.onended = stopVideoTrack;
       localVideoTrackRef.current = track;
       streamRef.current.addTrack(track);
       connectionsRef.current.forEach((connection) => connection.addTrack(track, streamRef.current!));
-      setCameraOn(true);
+      if (source === "camera") setCameraOn(true);
+      else setScreenSharing(true);
     } catch {
-      setError("Не удалось получить доступ к камере");
+      setError(source === "camera" ? "Не удалось получить доступ к камере" : "Не удалось начать демонстрацию экрана");
     }
-  }, [cameraOn]);
+  }, [stopVideoTrack]);
+
+  const toggleCamera = useCallback(async () => {
+    if (cameraOn) stopVideoTrack();
+    else await startVideoTrack("camera");
+  }, [cameraOn, startVideoTrack, stopVideoTrack]);
+
+  const toggleScreenShare = useCallback(async () => {
+    if (screenSharing) stopVideoTrack();
+    else await startVideoTrack("screen");
+  }, [screenSharing, startVideoTrack, stopVideoTrack]);
 
   useEffect(() => {
     if (serverRef.current !== serverId && roomRef.current) void leave();
@@ -380,6 +397,7 @@ export function useVoiceChat(serverId: string) {
     status,
     muted,
     cameraOn,
+    screenSharing,
     participantCount,
     participants,
     localStream,
@@ -389,5 +407,6 @@ export function useVoiceChat(serverId: string) {
     leave,
     toggleMute,
     toggleCamera,
+    toggleScreenShare,
   };
 }

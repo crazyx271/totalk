@@ -256,9 +256,11 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           localStream={voice.localStream}
           remoteStreams={voice.remoteStreams}
           cameraOn={voice.cameraOn}
+          screenSharing={voice.screenSharing}
           muted={voice.muted}
           onToggleMute={voice.toggleMute}
           onToggleCamera={voice.toggleCamera}
+          onToggleScreenShare={voice.toggleScreenShare}
           onLeave={() => void voice.leave()}
         />
       )}
