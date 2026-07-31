@@ -66,11 +66,15 @@ export default function HomeHub({
   const time = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
 
   const loadSocial = useCallback(async (query = "") => {
-    const params = query.trim().length >= 2 ? `?q=${encodeURIComponent(query.trim())}` : "";
+    const trimmed = query.trim();
+    const params = trimmed.length >= 2 ? `?q=${encodeURIComponent(trimmed)}` : "";
     const response = await fetch(`/api/friends${params}`, { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json() as SocialData;
-    setSocial(data);
+    // The periodic background refresh below calls this with no query just
+    // to keep friends/incoming/outgoing fresh — it shouldn't blow away
+    // whatever search results are currently on screen with an empty list.
+    setSocial((current) => (trimmed.length >= 2 ? data : { ...data, results: current.results }));
     setSelectedFriend((current) =>
       current ? data.friends.find((friend) => friend.id === current.id) ?? null : current,
     );
