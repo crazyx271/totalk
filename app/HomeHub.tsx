@@ -1,10 +1,12 @@
 "use client";
 
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ToTalkUser } from "./page";
 import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
+import ProfileModal from "./ProfileModal";
 import { useVoiceChat } from "./useVoiceChat";
+import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
 
 type Friend = {
@@ -48,12 +50,15 @@ export default function HomeHub({
   user,
   onOpenServer,
   onLogout,
+  onUpdateUser,
 }: {
   user: ToTalkUser;
   onOpenServer: () => void;
   onLogout: () => Promise<void>;
+  onUpdateUser: (user: ToTalkUser) => void;
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
+  const [showProfile, setShowProfile] = useState(false);
   const [section, setSection] = useState<"friends" | "pending" | "add">("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [search, setSearch] = useState("");
@@ -110,7 +115,10 @@ export default function HomeHub({
     setActiveCall((current) => {
       if (!current) return null;
       const updated = data.calls.find((call) => call.id === current.id) ?? null;
-      if (!updated && voiceRoom) void leaveVoice();
+      if (!updated) {
+        if (voiceRoom) void leaveVoice();
+        playEndTone();
+      }
       return updated;
     });
   }, [leaveVoice, voiceRoom]);
@@ -141,6 +149,24 @@ export default function HomeHub({
       window.clearInterval(timer);
     };
   }, [loadCalls]);
+
+  useEffect(() => {
+    if (incomingCall) startRingtone();
+    else stopRingtone();
+    return stopRingtone;
+  }, [incomingCall]);
+
+  const connectedToneRef = useRef(false);
+  useEffect(() => {
+    if (activeCall && voice.participantCount > 1) {
+      if (!connectedToneRef.current) {
+        connectedToneRef.current = true;
+        playConnectTone();
+      }
+    } else if (!activeCall) {
+      connectedToneRef.current = false;
+    }
+  }, [activeCall, voice.participantCount]);
 
   async function socialAction(action: string, friend: Friend) {
     setNotice("");
@@ -218,7 +244,10 @@ export default function HomeHub({
       body: JSON.stringify({ action, callId: call.id }),
     });
     if (incomingCall?.id === call.id) setIncomingCall(null);
-    if (activeCall?.id === call.id) setActiveCall(null);
+    if (activeCall?.id === call.id) {
+      setActiveCall(null);
+      playEndTone();
+    }
     await voice.leave();
   }
 
@@ -266,11 +295,14 @@ export default function HomeHub({
           {social.friends.length === 0 && <p className="empty-side">Здесь появятся ваши друзья</p>}
         </div>
         <div className="home-user-bar">
-          <span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span>
-          <span><b>{user.displayName}</b><small>@{user.username}</small></span>
+          <button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль">
+            <span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span>
+            <span><b>{user.displayName}</b><small>@{user.username}</small></span>
+          </button>
           <button onClick={() => void onLogout()} aria-label="Выйти">↪</button>
         </div>
       </aside>
+      {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
 
       <section className="home-content">
         {selectedFriend ? (

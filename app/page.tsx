@@ -92,5 +92,5 @@ export default function Home() {
     );
   }
 
-  return <ToTalkApp user={user} onLogout={logout} />;
+  return <ToTalkApp user={user} onLogout={logout} onUpdateUser={setUser} />;
 }

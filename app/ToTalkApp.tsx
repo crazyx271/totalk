@@ -4,8 +4,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import HomeHub from "./HomeHub";
 import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
+import ProfileModal from "./ProfileModal";
 import { useVoiceChat } from "./useVoiceChat";
 import type { Sticker } from "./stickers";
+import type { ToTalkUser } from "./page";
 
 type Message = {
   id: number;
@@ -30,15 +32,12 @@ const workspace = {
 } as const;
 
 type ToTalkAppProps = {
-  user: {
-    id: number;
-    displayName: string;
-    username: string;
-  };
+  user: ToTalkUser;
   onLogout: () => Promise<void>;
+  onUpdateUser: (user: ToTalkUser) => void;
 };
 
-export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
+export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppProps) {
   const [homeMode, setHomeMode] = useState(true);
   const [channel, setChannel] = useState(workspace.channels[0]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,6 +46,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   const [sending, setSending] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"channels" | "members" | null>(null);
   const [showStickers, setShowStickers] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
   const voice = useVoiceChat(workspace.id);
 
@@ -154,7 +154,7 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
   }
 
   if (homeMode) {
-    return <HomeHub user={user} onLogout={onLogout} onOpenServer={openWorkspace} />;
+    return <HomeHub user={user} onLogout={onLogout} onOpenServer={openWorkspace} onUpdateUser={onUpdateUser} />;
   }
 
   const liveMembers = [
@@ -200,7 +200,8 @@ export default function ToTalkApp({ user, onLogout }: ToTalkAppProps) {
           {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
           {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
-        <div className="user-bar"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><div><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></div>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
+        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
+        {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
       </aside>
 
       <section className="chat-panel">

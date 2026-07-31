@@ -103,6 +103,22 @@ button:not(:disabled):active{transform:scale(.94)}
 .workspace-title .connection.online{color:#57c991}
 .workspace-title .connection.error{color:#ee7182}
 .user-bar b,.user-bar small{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.user-bar-identity{flex:1;display:flex;align-items:center;gap:8px;min-width:0;border:0;background:none;color:inherit;cursor:pointer;text-align:left;padding:4px;border-radius:8px}
+.user-bar-identity:hover{background:#1c1d24}
+.user-bar-identity>span:last-child{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+.modal-scrim{position:fixed;inset:0;z-index:30;background:#000a;display:grid;place-items:center;padding:20px}
+.modal-card{width:min(420px,100%);background:#1d1e24;border:1px solid #343640;border-radius:18px;padding:24px;box-shadow:0 30px 80px #0008;animation:modalIn .18s ease}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-header b{font-size:17px}
+.modal-header button{border:0;background:none;color:#aaa;font-size:22px;cursor:pointer}
+.modal-card form{display:flex;flex-direction:column;gap:14px}
+.modal-card label{display:flex;flex-direction:column;gap:6px;color:#b7b8c4;font-size:12px;font-weight:700}
+.modal-card input{height:42px;border:1px solid #3b3d48;border-radius:10px;background:#14151a;color:white;outline:0;padding:0 12px}
+.modal-card input:focus{border-color:#8273ef;box-shadow:0 0 0 3px #7c6cf221}
+.modal-divider{margin-top:4px;padding-top:14px;border-top:1px solid #2e2f38;color:#7d808e;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+@keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .user-bar button[aria-label="Выйти"]{border:0;background:transparent;color:#aaa;cursor:pointer;padding:8px;border-radius:8px}
 .user-bar button[aria-label="Выйти"]:hover{background:#292a31;color:#fff}
 .composer button:disabled{opacity:.45;cursor:wait}
