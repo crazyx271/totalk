@@ -43,6 +43,7 @@ next-env.d.ts
 /desktop/node_modules/
 /desktop/release/
 
-# local sqlite database
+# local sqlite database and uploaded user content
 /data/*.sqlite*
+/data/avatars/
 !/data/.gitkeep

@@ -24,6 +24,7 @@ export async function GET(request: Request) {
       userId: users.id,
       author: users.displayName,
       username: users.username,
+      avatarPath: users.avatarPath,
       text: messages.content,
       kind: messages.kind,
       createdAt: messages.createdAt,
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     .returning({ id: messages.id, text: messages.content, kind: messages.kind, createdAt: messages.createdAt });
 
   return Response.json({
-    message: { ...message, userId: user.id, author: user.displayName, username: user.username },
+    message: { ...message, userId: user.id, author: user.displayName, username: user.username, avatarPath: user.avatarPath },
   }, { status: 201 });
 }
 

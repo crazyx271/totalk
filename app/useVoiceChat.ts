@@ -14,6 +14,7 @@ export type VoiceParticipant = {
   userId: number;
   displayName: string;
   username: string;
+  avatarPath: string | null;
 };
 
 type IceServerConfig = {

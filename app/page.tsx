@@ -7,6 +7,7 @@ export type ToTalkUser = {
   id: number;
   username: string;
   displayName: string;
+  avatarPath: string | null;
 };
 
 export default function Home() {

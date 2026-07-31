@@ -1,13 +1,17 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import * as schema from "./schema";
 
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 export function databasePath() {
   return resolve(process.env.DATABASE_PATH ?? "./data/totalk.sqlite");
+}
+
+export function avatarsDir() {
+  return join(dirname(databasePath()), "avatars");
 }
 
 export function getDb() {

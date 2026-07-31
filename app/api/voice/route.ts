@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       userId: users.id,
       displayName: users.displayName,
       username: users.username,
+      avatarPath: users.avatarPath,
     })
     .from(voicePeers)
     .innerJoin(users, eq(voicePeers.userId, users.id))

@@ -5,6 +5,7 @@ import type { ToTalkUser } from "./page";
 import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
 import ProfileModal from "./ProfileModal";
+import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
@@ -13,6 +14,7 @@ type Friend = {
   id: number;
   username: string;
   displayName: string;
+  avatarPath: string | null;
   requestId?: number;
 };
 
@@ -22,6 +24,7 @@ type DirectMessage = {
   recipientId: number;
   author: string;
   username: string;
+  avatarPath: string | null;
   text: string;
   kind: string;
   createdAt: string;
@@ -254,7 +257,7 @@ export default function HomeHub({
   const renderPerson = (friend: Friend, actions?: ReactNode) => (
     <div className="friend-row" key={friend.id}>
       <button className="friend-main" onClick={() => setSelectedFriend(friend)}>
-        <span className="friend-avatar">{friend.displayName.charAt(0).toUpperCase()}</span>
+        <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar" />
         <span><b>{friend.displayName}</b><small>@{friend.username}</small></span>
       </button>
       <div className="friend-actions">{actions}</div>
@@ -288,7 +291,7 @@ export default function HomeHub({
         <div className="dm-list">
           {social.friends.map((friend) => (
             <button className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id} onClick={() => setSelectedFriend(friend)}>
-              <span className="friend-avatar small">{friend.displayName.charAt(0).toUpperCase()}</span>
+              <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small" />
               <span><b>{friend.displayName}</b><small>@{friend.username}</small></span>
             </button>
           ))}
@@ -296,7 +299,7 @@ export default function HomeHub({
         </div>
         <div className="home-user-bar">
           <button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль">
-            <span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span>
+            <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar>
             <span><b>{user.displayName}</b><small>@{user.username}</small></span>
           </button>
           <button onClick={() => void onLogout()} aria-label="Выйти">↪</button>
@@ -309,15 +312,15 @@ export default function HomeHub({
           <>
             <header className="dm-header">
               <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад">‹</button>
-              <span className="friend-avatar">{selectedFriend.displayName.charAt(0).toUpperCase()}</span>
+              <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
               <span><b>{selectedFriend.displayName}</b><small>@{selectedFriend.username}</small></span>
               <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}>☎ Позвонить</button>
             </header>
             <div className="dm-messages">
-              {messages.length === 0 && <div className="dm-intro"><span className="friend-avatar large">{selectedFriend.displayName.charAt(0).toUpperCase()}</span><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
+              {messages.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
               {messages.map((message) => (
                 <article className={`dm-message ${message.senderId === user.id ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
-                  <span className="friend-avatar small">{message.author.charAt(0).toUpperCase()}</span>
+                  <Avatar name={message.author} avatarPath={message.avatarPath} className="friend-avatar small" />
                   <div>
                     <b>{message.author}</b><time>{time.format(new Date(`${message.createdAt}Z`))}</time>
                     {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
@@ -381,7 +384,7 @@ export default function HomeHub({
       </section>
 
       {incomingCall && <div className="call-toast">
-        <span className="friend-avatar">{incomingCall.person.displayName.charAt(0).toUpperCase()}</span>
+        <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} className="friend-avatar" />
         <div><small>ВХОДЯЩИЙ ЗВОНОК</small><b>{incomingCall.person.displayName}</b></div>
         <button className="accept-call" onClick={() => void acceptCall(incomingCall)}>☎</button>
         <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")}>×</button>
@@ -392,6 +395,7 @@ export default function HomeHub({
           subtitle={activeCall.status === "ringing" ? "Звоним…" : voice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
           error={voice.error}
           selfName={user.displayName}
+          selfAvatarPath={user.avatarPath}
           participants={voice.participants}
           localStream={voice.localStream}
           remoteStreams={voice.remoteStreams}

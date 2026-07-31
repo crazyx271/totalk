@@ -99,6 +99,7 @@ export async function getSessionUser(request: Request) {
       id: users.id,
       username: users.username,
       displayName: users.displayName,
+      avatarPath: users.avatarPath,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))

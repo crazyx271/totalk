@@ -24,9 +24,9 @@ export async function GET(request: Request) {
   const otherIds = [...new Set(rows.map((call) =>
     call.callerId === currentUser.id ? call.calleeId : call.callerId,
   ))];
-  const people = new Map<number, { id: number; username: string; displayName: string }>();
+  const people = new Map<number, { id: number; username: string; displayName: string; avatarPath: string | null }>();
   for (const id of otherIds) {
-    const [person] = await getDb().select({ id: users.id, username: users.username, displayName: users.displayName })
+    const [person] = await getDb().select({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath })
       .from(users).where(eq(users.id, id)).limit(1);
     if (person) people.set(id, person);
   }

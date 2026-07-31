@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
   }
 
   const [updated] = await db.update(users).set(updates).where(eq(users.id, sessionUser.id))
-    .returning({ id: users.id, username: users.username, displayName: users.displayName });
+    .returning({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath });
 
   return Response.json({ user: updated });
 }

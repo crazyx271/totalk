@@ -87,6 +87,7 @@ button:not(:disabled):active{transform:scale(.94)}
 }
 .user-bar { height:58px;background:#121318;display:flex;align-items:center;padding:8px;gap:8px}.user-bar>div{display:flex;flex-direction:column;min-width:0;flex:1}.user-bar b{font-size:12px}.user-bar small{font-size:10px;color:var(--muted)}.user-bar button{border:0;background:none;color:#aaa;cursor:pointer}
 .avatar { flex:none; width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#4d5060;font-weight:700;position:relative}.avatar i{position:absolute;right:0;bottom:0;width:11px;height:11px;border:2px solid var(--panel);border-radius:50%;background:#49c486}.avatar.self{width:34px;height:34px;background:linear-gradient(145deg,#f49a62,#a94f76)}
+.avatar-photo{width:100%;height:100%;object-fit:cover;border-radius:inherit;grid-column:1;grid-row:1}
 .chat-panel { min-width:0;display:flex;flex-direction:column;background:var(--chat);position:relative; }
 .chat-header { height:64px;flex:none;border-bottom:1px solid #16171b;display:flex;align-items:center;gap:10px;padding:0 20px;box-shadow:0 2px 8px #0002}.hash{font-size:25px;color:#737685}.chat-header>b{font-size:15px}.header-divider{width:1px;height:22px;background:#3a3b43}.chat-header small{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-actions{margin-left:auto;display:flex;gap:3px}.header-actions button,.mobile-menu{border:0;background:transparent;color:#b5b6c2;font-size:20px;cursor:pointer;width:36px;height:36px;border-radius:8px}.header-actions button:hover,.mobile-menu:hover{background:#303139;color:white}.mobile-menu{display:none}
 .message-scroll { overflow:auto;flex:1;padding:32px 24px 18px;scrollbar-color:#121318 transparent;}.channel-intro>div{width:58px;height:58px;border-radius:50%;background:#353640;display:grid;place-items:center;color:#a5a7b4;font-size:34px}.channel-intro h1{font-size:26px;margin:14px 0 4px}.channel-intro p{margin:0;color:var(--muted);font-size:14px}.day-divider{height:44px;display:flex;align-items:center;margin:14px 0 3px}.day-divider:before,.day-divider:after{content:"";height:1px;background:#383941;flex:1}.day-divider span{color:#777a89;font-size:10px;font-weight:700;padding:0 9px}
@@ -118,6 +119,11 @@ button:not(:disabled):active{transform:scale(.94)}
 .modal-card input{height:42px;border:1px solid #3b3d48;border-radius:10px;background:#14151a;color:white;outline:0;padding:0 12px}
 .modal-card input:focus{border-color:#8273ef;box-shadow:0 0 0 3px #7c6cf221}
 .modal-divider{margin-top:4px;padding-top:14px;border-top:1px solid #2e2f38;color:#7d808e;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.profile-avatar-row{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:18px}
+.profile-avatar-edit{position:relative;border:0;background:none;padding:0;cursor:pointer;border-radius:50%}
+.profile-avatar-large{width:84px;height:84px;font-size:30px}
+.profile-avatar-edit-label{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:13px;border:3px solid #1d1e24}
+.profile-avatar-remove{border:0;background:none;color:#e0788b;font-size:12px;cursor:pointer;text-decoration:underline;padding:2px}
 @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .user-bar button[aria-label="Выйти"]{border:0;background:transparent;color:#aaa;cursor:pointer;padding:8px;border-radius:8px}
 .user-bar button[aria-label="Выйти"]:hover{background:#292a31;color:#fff}

@@ -2,15 +2,17 @@
 
 import { useEffect, useRef } from "react";
 import type { VoiceParticipant } from "./useVoiceChat";
+import Avatar from "./Avatar";
 
 type CallTileProps = {
   name: string;
+  avatarPath?: string | null;
   sub?: string;
   stream: MediaStream | null;
   isLocal?: boolean;
 };
 
-function CallTile({ name, sub, stream, isLocal = false }: CallTileProps) {
+function CallTile({ name, avatarPath, sub, stream, isLocal = false }: CallTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hasVideo = Boolean(stream?.getVideoTracks().length);
 
@@ -21,7 +23,7 @@ function CallTile({ name, sub, stream, isLocal = false }: CallTileProps) {
   return (
     <div className={`call-tile ${hasVideo ? "has-video" : ""}`}>
       <video ref={videoRef} autoPlay playsInline muted={isLocal} className={isLocal ? "mirrored" : ""} />
-      <span className="call-tile-avatar">{name.charAt(0).toUpperCase() || "?"}</span>
+      <Avatar name={name} avatarPath={avatarPath} className="call-tile-avatar" />
       <div className="call-tile-label"><b>{name}</b>{sub && <small>{sub}</small>}</div>
     </div>
   );
@@ -32,6 +34,7 @@ export type VoiceCallOverlayProps = {
   subtitle?: string;
   error?: string;
   selfName: string;
+  selfAvatarPath?: string | null;
   participants: VoiceParticipant[];
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
@@ -47,6 +50,7 @@ export default function VoiceCallOverlay({
   subtitle,
   error,
   selfName,
+  selfAvatarPath,
   participants,
   localStream,
   remoteStreams,
@@ -61,16 +65,17 @@ export default function VoiceCallOverlay({
   return (
     <div className={`voice-overlay ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
       <div className="voice-overlay-header">
-        <span className="voice-pulse">{selfName.charAt(0).toUpperCase()}</span>
+        <Avatar name={selfName} avatarPath={selfAvatarPath} className="voice-pulse" />
         <div><b>{title}</b>{subtitle && <small>{subtitle}</small>}</div>
       </div>
       {error && <div className="voice-overlay-error">{error}</div>}
       <div className="call-tile-grid">
-        <CallTile name={selfName} sub="Вы" stream={localStream} isLocal />
+        <CallTile name={selfName} avatarPath={selfAvatarPath} sub="Вы" stream={localStream} isLocal />
         {participants.map((participant) => (
           <CallTile
             key={participant.peerId}
             name={participant.displayName}
+            avatarPath={participant.avatarPath}
             sub={`@${participant.username}`}
             stream={remoteStreams.get(participant.peerId) ?? null}
           />

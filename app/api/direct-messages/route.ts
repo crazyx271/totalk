@@ -21,6 +21,7 @@ export async function GET(request: Request) {
       recipientId: directMessages.recipientId,
       author: users.displayName,
       username: users.username,
+      avatarPath: users.avatarPath,
       text: directMessages.content,
       kind: directMessages.kind,
       createdAt: directMessages.createdAt,
@@ -59,5 +60,5 @@ export async function POST(request: Request) {
     content: text,
     kind,
   }).returning({ id: directMessages.id, text: directMessages.content, kind: directMessages.kind, createdAt: directMessages.createdAt });
-  return Response.json({ message: { ...message, senderId: currentUser.id } }, { status: 201 });
+  return Response.json({ message: { ...message, senderId: currentUser.id, author: currentUser.displayName, username: currentUser.username, avatarPath: currentUser.avatarPath } }, { status: 201 });
 }

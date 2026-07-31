@@ -5,6 +5,7 @@ import HomeHub from "./HomeHub";
 import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
 import ProfileModal from "./ProfileModal";
+import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import type { Sticker } from "./stickers";
 import type { ToTalkUser } from "./page";
@@ -15,6 +16,7 @@ type Message = {
   author: string;
   username?: string;
   avatar: string;
+  avatarPath: string | null;
   time: string;
   text: string;
   kind: string;
@@ -56,7 +58,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       const response = await fetch(`/api/messages?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("messages unavailable");
       const data = await response.json() as {
-        messages: Array<{ id: number; userId: number; author: string; username: string; text: string; kind: string; createdAt: string }>;
+        messages: Array<{ id: number; userId: number; author: string; username: string; avatarPath: string | null; text: string; kind: string; createdAt: string }>;
       };
       setMessages(data.messages.map((message) => ({
         id: message.id,
@@ -64,6 +66,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         author: message.author,
         username: message.username,
         avatar: message.author.trim().charAt(0).toUpperCase() || "?",
+        avatarPath: message.avatarPath,
         time: new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }).format(new Date(`${message.createdAt}Z`)),
         text: message.text,
         kind: message.kind,
@@ -103,6 +106,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       author: user.displayName,
       username: user.username,
       avatar: user.displayName.charAt(0).toUpperCase() || "В",
+      avatarPath: user.avatarPath,
       time: date.format(new Date()),
       text,
       kind: "text",
@@ -134,6 +138,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       author: user.displayName,
       username: user.username,
       avatar: user.displayName.charAt(0).toUpperCase() || "В",
+      avatarPath: user.avatarPath,
       time: date.format(new Date()),
       text: sticker,
       kind: "sticker",
@@ -158,11 +163,11 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   }
 
   const liveMembers = [
-    { key: `self-${user.id}`, avatar: user.displayName.charAt(0).toUpperCase(), name: user.displayName, status: voice.room ? `В голосе: ${voice.room}` : `@${user.username}` },
+    { key: `self-${user.id}`, name: user.displayName, avatarPath: user.avatarPath, status: voice.room ? `В голосе: ${voice.room}` : `@${user.username}` },
     ...voice.participants.map((participant) => ({
       key: participant.peerId,
-      avatar: participant.displayName.charAt(0).toUpperCase() || "?",
       name: participant.displayName,
+      avatarPath: participant.avatarPath,
       status: `@${participant.username}`,
     })),
   ];
@@ -189,10 +194,10 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           {workspace.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}</button>)}
           <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span></div>
           {workspace.voiceChannels.map((item) => <button key={item} onClick={() => void voice.join(item)} className={`channel ${voice.room === item ? "selected voice-active" : ""}`}><span>♫</span>{item}{voice.room === item && <em>{voice.participantCount}</em>}</button>)}
-          {voice.room && <div className="voice-users"><span className="mini-avatar">{user.displayName.charAt(0).toUpperCase()}</span><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
+          {voice.room && <div className="voice-users"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="mini-avatar" /><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
           {voice.room && voice.participants.map((participant) => (
             <div className="voice-users remote-voice-user" key={participant.peerId}>
-              <span className="mini-avatar">{participant.displayName.charAt(0).toUpperCase() || "?"}</span>
+              <Avatar name={participant.displayName} avatarPath={participant.avatarPath} className="mini-avatar" />
               <div><b>{participant.displayName}</b><small>@{participant.username} · в эфире</small></div>
               <i className="voice-live-dot" aria-label="Подключён" />
             </div>
@@ -200,7 +205,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
           {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
-        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><span className="avatar self">{user.displayName.charAt(0).toUpperCase()}<i /></span><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
+        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? "⊘" : "●"}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал">☎</button></>}<button onClick={() => void onLogout()} aria-label="Выйти">↪</button></div>
         {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
       </aside>
 
@@ -216,7 +221,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           <div className="day-divider"><span>Сегодня</span></div>
           {messages.map((message) => (
             <article className={`message ${message.mine ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
-              <span className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`}>{message.avatar}</span>
+              <Avatar name={message.author} avatarPath={message.avatarPath} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />
               <div>
                 <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>
                 {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
@@ -237,7 +242,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
 
       <aside className={`member-panel ${mobilePanel === "members" ? "mobile-open" : ""}`}>
         <div className="member-title">УЧАСТНИКИ — {liveMembers.length}</div>
-        {liveMembers.map((member) => <button className="member" key={member.key}><span className={`avatar avatar-${member.avatar.charCodeAt(0) % 4}`}>{member.avatar}<i /></span><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
+        {liveMembers.map((member) => <button className="member" key={member.key}><Avatar name={member.name} avatarPath={member.avatarPath} className={`avatar avatar-${member.name.charCodeAt(0) % 4}`}><i /></Avatar><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
       </aside>
       {mobilePanel && <button className="scrim" onClick={() => setMobilePanel(null)} aria-label="Закрыть панель" />}
       {voice.room && (
@@ -246,6 +251,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           subtitle={voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}
           error={voice.error}
           selfName={user.displayName}
+          selfAvatarPath={user.avatarPath}
           participants={voice.participants}
           localStream={voice.localStream}
           remoteStreams={voice.remoteStreams}
