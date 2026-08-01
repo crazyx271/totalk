@@ -1,7 +1,9 @@
 import { app, BrowserWindow, Menu, session, shell } from "electron";
-import { autoUpdater } from "electron-updater";
+import electronUpdater from "electron-updater";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+const { autoUpdater } = electronUpdater;
 
 const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
