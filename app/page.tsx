@@ -5,6 +5,7 @@ import ToTalkApp from "./ToTalkApp";
 import { DownloadIcon, MessageIcon, UsersIcon, XIcon } from "./Icons";
 import { MonitorIcon, VideoIcon } from "./CallIcons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
+import { useDesktopDownload } from "./useDesktopDownload";
 
 export type ToTalkUser = {
   id: number;
@@ -32,6 +33,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isDesktop = useIsDesktopApp();
+  const desktopDownload = useDesktopDownload();
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -115,7 +117,7 @@ export default function Home() {
             <p>Голос, видео, текст, демонстрация экрана и стикеры — всё в одном месте, без границ и подписок.</p>
             <div className="landing-hero-actions">
               <button className="primary" onClick={() => openAuth("register")}>Начать общение</button>
-              {!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>}
+              {!isDesktop && <a href={desktopDownload.href} download><DownloadIcon />{desktopDownload.label}</a>}
             </div>
           </div>
           <div className="landing-hero-art" aria-hidden="true">
@@ -150,12 +152,18 @@ export default function Home() {
         {!isDesktop && (
           <section className="landing-platforms" id="download">
             <h2>Заходите откуда угодно</h2>
-            <p>Один аккаунт для браузера и приложения на Windows — переписка и звонки синхронизируются мгновенно.</p>
+            <p>Один аккаунт для браузера, Windows и macOS — переписка и звонки синхронизируются мгновенно.</p>
             <div className="landing-platform-row">
               <div className="landing-platform-card"><DownloadIcon /><b>Windows</b><small>Приложение с автообновлением</small></div>
+              <div className="landing-platform-card"><DownloadIcon /><b>macOS</b><small>Apple Silicon и Intel</small></div>
               <div className="landing-platform-card"><MonitorIcon /><b>Браузер</b><small>Без установки, сразу в деле</small></div>
             </div>
-            <a className="landing-download" href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>
+            <div className="landing-download-options">
+              <a className={`landing-download${desktopDownload.platform === "windows" ? " recommended" : ""}`} href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Windows</a>
+              <a className={`landing-download${desktopDownload.platform === "mac-arm64" ? " recommended" : ""}`} href="/downloads/ToTalk-0.2.0-mac-arm64.dmg" download><DownloadIcon />Mac · Apple Silicon</a>
+              <a className={`landing-download${desktopDownload.platform === "mac-x64" ? " recommended" : ""}`} href="/downloads/ToTalk-0.2.0-mac-x64.dmg" download><DownloadIcon />Mac · Intel</a>
+            </div>
+            <small className="landing-download-note">Версия для macOS пока не подписана Apple. При первом запуске выберите ToTalk правой кнопкой мыши → «Открыть».</small>
           </section>
         )}
 
