@@ -312,6 +312,8 @@ button svg{width:16px;height:16px;flex:none;display:block}
 
 /* Public website and cross-platform download center */
 .public-site,.download-page{--public-bg:#0b0d13;--public-card:#141821;--public-line:#ffffff14;--public-text:#f5f6fb;--public-muted:#9ba3b6;--public-accent:#7769f4;--public-cyan:#4cc9c0;background:radial-gradient(circle at 76% 10%,#7365ef20,transparent 30%),radial-gradient(circle at 18% 42%,#36aaa614,transparent 25%),var(--public-bg);color:var(--public-text);scrollbar-color:#5f6474 transparent;scrollbar-width:thin;scroll-behavior:smooth}
+.public-site{height:100dvh;overflow-y:auto;overflow-x:hidden}
+.has-desktop-titlebar .public-site{height:calc(100dvh - 36px)}
 .public-site::-webkit-scrollbar,.download-page::-webkit-scrollbar{width:9px}.public-site::-webkit-scrollbar-thumb,.download-page::-webkit-scrollbar-thumb{background:#4b5060;border-radius:10px;border:2px solid var(--public-bg)}
 .public-header,.download-header{position:sticky;top:0;z-index:10;width:min(1180px,calc(100% - 40px));height:72px;margin:0 auto;display:flex;align-items:center;gap:36px;background:#0b0d13d9;border-bottom:1px solid #ffffff0d;backdrop-filter:blur(18px)}
 .public-brand{display:flex;align-items:center;gap:10px;color:var(--public-text);text-decoration:none;font-size:17px}.public-brand>span{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(145deg,#a197ff,#6555df);font-size:17px;font-weight:900;box-shadow:0 9px 25px #6958df55}.public-brand b{font-weight:850;letter-spacing:-.02em}
