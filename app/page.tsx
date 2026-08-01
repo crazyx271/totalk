@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import ToTalkApp from "./ToTalkApp";
+import { DownloadIcon } from "./Icons";
 
 export type ToTalkUser = {
   id: number;
@@ -91,6 +92,10 @@ export default function Home() {
           <button className="auth-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>
             {mode === "login" ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
           </button>
+          <a className="auth-download" href="/downloads/ToTalk-Setup.exe" download>
+            <DownloadIcon />
+            Скачать для Windows
+          </a>
         </section>
       </main>
     );

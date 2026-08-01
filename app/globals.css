@@ -199,5 +199,8 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .auth-card input{height:46px;border:1px solid #3b3d48;border-radius:11px;background:#14151a;color:white;outline:0;padding:0 13px}.auth-card input:focus{border-color:#8273ef;box-shadow:0 0 0 3px #7c6cf221}
 .auth-submit{height:46px;border:0;border-radius:11px;background:linear-gradient(135deg,#8d7df7,#6b59df);color:white;font-weight:800;cursor:pointer;margin-top:4px}.auth-submit:hover{filter:brightness(1.08)}.auth-submit:disabled{opacity:.55;cursor:wait}
 .auth-switch{width:100%;border:0;background:transparent;color:#9e92ff;cursor:pointer;margin-top:20px;font-size:13px}
+.auth-download{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;margin-top:16px;border:1px solid #343640;border-radius:11px;background:#14151a;color:#c8c9d6;text-decoration:none;font-size:13px;font-weight:700;box-sizing:border-box}
+.auth-download:hover{border-color:#8273ef;color:#f7f7fb}
+.auth-download svg{width:16px;height:16px}
 .auth-error{background:#542a35;border:1px solid #814050;color:#ffbdc5;border-radius:10px;padding:10px 12px;font-size:12px}
 .auth-loading{display:flex;flex-direction:column;align-items:center;gap:14px;color:#a9abb8}.auth-loading p{margin:0}
