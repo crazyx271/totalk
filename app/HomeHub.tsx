@@ -2,30 +2,16 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ToTalkUser } from "./page";
-import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
 import ProfileModal from "./ProfileModal";
 import UserProfileCard from "./UserProfileCard";
 import SettingsModal from "./SettingsModal";
 import Avatar from "./Avatar";
-import { useVoiceChat } from "./useVoiceChat";
-import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
+import type { DirectCall, Friend } from "./callTypes";
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { PhoneOffIcon } from "./CallIcons";
-
-type Friend = {
-  id: number;
-  username: string;
-  displayName: string;
-  avatarPath: string | null;
-  bio: string | null;
-  bannerColor: string | null;
-  createdAt: string;
-  isOnline: boolean;
-  requestId?: number;
-};
 
 type DirectMessage = {
   id: number;
@@ -37,16 +23,6 @@ type DirectMessage = {
   text: string;
   kind: string;
   createdAt: string;
-};
-
-type DirectCall = {
-  id: number;
-  callerId: number;
-  calleeId: number;
-  room: string;
-  status: "ringing" | "accepted";
-  incoming: boolean;
-  person: Friend;
 };
 
 type CallHistoryEntry = {
@@ -85,11 +61,19 @@ export default function HomeHub({
   onOpenServer,
   onLogout,
   onUpdateUser,
+  activeCall,
+  onStartCall,
+  focusFriendId,
+  onFocusHandled,
 }: {
   user: ToTalkUser;
   onOpenServer: () => void;
   onLogout: () => Promise<void>;
   onUpdateUser: (user: ToTalkUser) => void;
+  activeCall: DirectCall | null;
+  onStartCall: (friend: Friend) => Promise<string | null>;
+  focusFriendId: number | null;
+  onFocusHandled: () => void;
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -106,11 +90,7 @@ export default function HomeHub({
   const [draft, setDraft] = useState("");
   const [showStickers, setShowStickers] = useState(false);
   const [notice, setNotice] = useState("");
-  const [incomingCall, setIncomingCall] = useState<DirectCall | null>(null);
-  const [activeCall, setActiveCall] = useState<DirectCall | null>(null);
-  const voice = useVoiceChat("dm");
-  const leaveVoice = voice.leave;
-  const voiceRoom = voice.room;
+  const messagesRef = useRef<HTMLDivElement | null>(null);
   const time = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
 
   const timeline = useMemo(() => {
@@ -126,6 +106,13 @@ export default function HomeHub({
     }));
     return [...messageItems, ...callItems].sort((a, b) => a.epoch - b.epoch);
   }, [messages, callHistory]);
+
+  // Open a conversation scrolled to the newest message, and stay pinned to
+  // the bottom as new ones arrive — not stuck at the top of the history.
+  useEffect(() => {
+    const container = messagesRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [selectedFriend, timeline.length]);
 
   const loadSocial = useCallback(async (query = "") => {
     const trimmed = query.trim();
@@ -171,22 +158,6 @@ export default function HomeHub({
     setCallHistory(data.history);
   }, [selectedFriend]);
 
-  const loadCalls = useCallback(async () => {
-    const response = await fetch("/api/calls", { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json() as { calls: DirectCall[] };
-    setIncomingCall(data.calls.find((call) => call.incoming && call.status === "ringing") ?? null);
-    setActiveCall((current) => {
-      if (!current) return null;
-      const updated = data.calls.find((call) => call.id === current.id) ?? null;
-      if (!updated) {
-        if (voiceRoom) void leaveVoice();
-        playEndTone();
-      }
-      return updated;
-    });
-  }, [leaveVoice, voiceRoom]);
-
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadSocial(), 0);
     const timer = window.setInterval(() => void loadSocial(), 5000);
@@ -206,32 +177,20 @@ export default function HomeHub({
     };
   }, [loadMessages, loadCallHistory]);
 
-  useEffect(() => {
-    const initialLoad = window.setTimeout(() => void loadCalls(), 0);
-    const timer = window.setInterval(() => void loadCalls(), 1500);
-    return () => {
-      window.clearTimeout(initialLoad);
-      window.clearInterval(timer);
-    };
-  }, [loadCalls]);
-
-  useEffect(() => {
-    if (incomingCall) startRingtone();
-    else stopRingtone();
-    return stopRingtone;
-  }, [incomingCall]);
-
-  const connectedToneRef = useRef(false);
-  useEffect(() => {
-    if (activeCall && voice.participantCount > 1) {
-      if (!connectedToneRef.current) {
-        connectedToneRef.current = true;
-        playConnectTone();
-      }
-    } else if (!activeCall) {
-      connectedToneRef.current = false;
+  // A DM call was just accepted from outside this view (see ToTalkApp,
+  // which owns call state so it survives navigating away) — jump to that
+  // conversation once its friend data is available. Adjusted during render
+  // (not an effect) per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [lastHandledFocusId, setLastHandledFocusId] = useState<number | null>(null);
+  if (focusFriendId !== null && focusFriendId !== lastHandledFocusId) {
+    const friend = social.friends.find((item) => item.id === focusFriendId);
+    if (friend) {
+      setLastHandledFocusId(focusFriendId);
+      setSelectedFriend(friend);
+      onFocusHandled();
     }
-  }, [activeCall, voice.participantCount]);
+  }
 
   async function socialAction(action: string, friend: Friend) {
     setNotice("");
@@ -275,50 +234,8 @@ export default function HomeHub({
   }
 
   async function startCall(friend: Friend) {
-    const response = await fetch("/api/calls", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "start", friendId: friend.id }),
-    });
-    const data = await response.json() as { call?: DirectCall; error?: string };
-    if (!response.ok || !data.call) {
-      setNotice(data.error ?? "Не удалось начать звонок");
-      return;
-    }
-    setActiveCall({ ...data.call, incoming: false, person: friend });
-    await voice.join(data.call.room);
-  }
-
-  async function acceptCall(call: DirectCall) {
-    const response = await fetch("/api/calls", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "accept", callId: call.id }),
-    });
-    if (!response.ok) {
-      setIncomingCall(null);
-      setNotice("Звонок уже недоступен — собеседник мог отменить его");
-      return;
-    }
-    setIncomingCall(null);
-    setActiveCall({ ...call, status: "accepted" });
-    setSelectedFriend(call.person);
-    await voice.join(call.room);
-  }
-
-  async function finishCall(call: DirectCall, action: "decline" | "end") {
-    await fetch("/api/calls", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action, callId: call.id }),
-    });
-    if (incomingCall?.id === call.id) setIncomingCall(null);
-    if (activeCall?.id === call.id) {
-      setActiveCall(null);
-      playEndTone();
-    }
-    await voice.leave();
-    await loadCallHistory();
+    const error = await onStartCall(friend);
+    if (error) setNotice(error);
   }
 
   const renderPerson = (friend: Friend, actions?: ReactNode) => (
@@ -409,7 +326,7 @@ export default function HomeHub({
               </button>
               <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}><PhoneIcon /><span>Позвонить</span></button>
             </header>
-            <div className="dm-messages">
+            <div className="dm-messages" ref={messagesRef}>
               {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
               {timeline.map((item) => item.type === "message" ? (
                 <article className={`dm-message ${item.message.senderId === user.id ? "mine" : ""} ${item.message.kind === "sticker" ? "sticker-message" : ""}`} key={`message-${item.message.id}`}>
@@ -484,31 +401,6 @@ export default function HomeHub({
         )}
       </section>
 
-      {incomingCall && <div className="call-toast">
-        <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} className="friend-avatar" />
-        <div><small>ВХОДЯЩИЙ ЗВОНОК</small><b>{incomingCall.person.displayName}</b></div>
-        <button className="accept-call" onClick={() => void acceptCall(incomingCall)} aria-label="Принять звонок"><PhoneIcon /></button>
-        <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")} aria-label="Отклонить звонок"><PhoneOffIcon /></button>
-      </div>}
-      {activeCall && (
-        <VoiceCallOverlay
-          title={activeCall.person.displayName}
-          subtitle={activeCall.status === "ringing" ? "Звоним…" : voice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
-          error={voice.error}
-          selfName={user.displayName}
-          selfAvatarPath={user.avatarPath}
-          participants={voice.participants}
-          localStream={voice.localStream}
-          remoteStreams={voice.remoteStreams}
-          cameraOn={voice.cameraOn}
-          screenSharing={voice.screenSharing}
-          muted={voice.muted}
-          onToggleMute={voice.toggleMute}
-          onToggleCamera={voice.toggleCamera}
-          onToggleScreenShare={voice.toggleScreenShare}
-          onLeave={() => void finishCall(activeCall, "end")}
-        />
-      )}
     </main>
   );
 }
