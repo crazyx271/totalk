@@ -49,6 +49,9 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [creatingServer, setCreatingServer] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [showCreateChannel, setShowCreateChannel] = useState<"text" | "voice" | null>(null);
+  const [creatingChannel, setCreatingChannel] = useState(false);
+  const [channelError, setChannelError] = useState("");
   const activeServer = servers.find((server) => server.id === activeServerId) ?? null;
   const workspace = activeServer ? {
     id: activeServer.id,
@@ -299,6 +302,31 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     }
   }
 
+  async function createChannel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeServer || !showCreateChannel) return;
+    setCreatingChannel(true);
+    setChannelError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/servers/channels", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ serverId: activeServer.id, name: String(form.get("name") ?? ""), kind: showCreateChannel }),
+      });
+      const data = await response.json() as { channel?: { id?: number; name: string; kind: string }; error?: string };
+      if (!response.ok || !data.channel) throw new Error(data.error ?? "Не удалось создать канал");
+      const newChannel = data.channel;
+      setServers((current) => current.map((server) => server.id === activeServer.id ? { ...server, channels: [...server.channels, newChannel] } : server));
+      if (showCreateChannel === "text") setChannel(newChannel.name);
+      setShowCreateChannel(null);
+    } catch (createError) {
+      setChannelError(createError instanceof Error ? createError.message : "Не удалось создать канал");
+    } finally {
+      setCreatingChannel(false);
+    }
+  }
+
   async function deleteActiveServer() {
     if (!activeServer || activeServer.ownerId !== user.id) return;
     if (!window.confirm(`Удалить группу «${activeServer.name}»? Сообщения группы будут удалены.`)) return;
@@ -458,6 +486,22 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     </div>
   ) : null;
 
+  const createChannelModal = showCreateChannel ? (
+    <div className="modal-scrim" onClick={() => setShowCreateChannel(null)}>
+      <section className="modal-card create-server-card" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={() => setShowCreateChannel(null)} aria-label="Закрыть"><XIcon /></button>
+        <span className="create-server-icon"><PlusIcon /></span>
+        <h2>{showCreateChannel === "text" ? "Новый текстовый канал" : "Новый голосовой канал"}</h2>
+        <p>Канал появится в списке сразу после создания.</p>
+        <form onSubmit={createChannel}>
+          <label>Название канала<input name="name" minLength={1} maxLength={32} required autoFocus placeholder={showCreateChannel === "text" ? "например, мемы" : "например, созвон"} /></label>
+          {channelError && <div className="auth-error">{channelError}</div>}
+          <button className="auth-submit" disabled={creatingChannel}>{creatingChannel ? "Создаём…" : "Создать канал"}</button>
+        </form>
+      </section>
+    </div>
+  ) : null;
+
   if (homeMode || !activeServer) {
     return (
       <>
@@ -477,6 +521,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         />
         {callToastAndDock}
         {createServerModal}
+        {createChannelModal}
       </>
     );
   }
@@ -505,9 +550,9 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         <aside className={`channel-panel ${mobilePanel === "channels" ? "mobile-open" : ""}`}>
           <div className="workspace-title"><span><b>{workspace.name}</b><small>{workspace.subtitle}</small></span><div className="workspace-actions"><span className={`connection ${connection}`}>{connection === "online" ? "● онлайн" : connection === "loading" ? "○ вход…" : "● нет связи"}</span>{activeServer.ownerId === user.id && <button type="button" className="delete-server-button" onClick={() => void deleteActiveServer()} aria-label="Удалить группу" title="Удалить группу"><XIcon /></button>}</div></div>
           <div className="channel-scroll">
-            <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span></div>
+            <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span>{activeServer.ownerId === user.id && <button type="button" onClick={() => { setChannelError(""); setShowCreateChannel("text"); }} aria-label="Добавить текстовый канал"><PlusIcon /></button>}</div>
             {workspace.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}</button>)}
-            <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span></div>
+            <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span>{activeServer.ownerId === user.id && <button type="button" onClick={() => { setChannelError(""); setShowCreateChannel("voice"); }} aria-label="Добавить голосовой канал"><PlusIcon /></button>}</div>
             {workspace.voiceChannels.map((item) => <button key={item} onClick={() => void voice.join(item)} className={`channel ${voice.room === item ? "selected voice-active" : ""}`}><span>♫</span>{item}{voice.room === item && <em>{voice.participantCount}</em>}</button>)}
             {voice.room && <div className="voice-users"><Avatar name={user.displayName} avatarPath={user.avatarPath} avatarFrame={user.avatarFrame} className="mini-avatar" /><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
             {voice.room && voice.participants.map((participant) => (
