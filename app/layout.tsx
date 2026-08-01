@@ -14,10 +14,10 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "ToTalk", statusBarStyle: "black-translucent" },
   openGraph: {
     title: "ToTalk",
-    description: "Общение без границ",
-    images: [{ url: "/og-v2.png", width: 1733, height: 909, alt: "ToTalk — сообщения, файлы и видеозвонки" }],
+    description: "Общение всегда рядом",
+    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "ToTalk — общение всегда рядом" }],
   },
-  twitter: { card: "summary_large_image", images: ["/og-v2.png"] },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
   icons: { icon: "/favicon.svg" },
 };
 
