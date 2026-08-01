@@ -5,7 +5,10 @@ import { directCalls, users } from "../../../db/schema";
 import { areFriends, friendPairKey } from "../../social";
 
 const CALL_TTL_MS = 5 * 60_000;
-const HISTORY_LIMIT = 30;
+// Generous on purpose: a burst of retried/unanswered calls (e.g. someone
+// mashing the call button while debugging connectivity) shouldn't be able to
+// push a real, completed call out of the history window.
+const HISTORY_LIMIT = 100;
 
 export async function GET(request: Request) {
   const currentUser = await getSessionUser(request);
