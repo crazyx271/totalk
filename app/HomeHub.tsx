@@ -8,7 +8,7 @@ import UserProfileCard from "./UserProfileCard";
 import SettingsModal from "./SettingsModal";
 import Avatar from "./Avatar";
 import type { Sticker } from "./stickers";
-import type { DirectCall, Friend } from "./callTypes";
+import type { CommunityServer, DirectCall, Friend } from "./callTypes";
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PaperclipIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { PhoneOffIcon } from "./CallIcons";
@@ -20,6 +20,7 @@ type DirectMessage = {
   author: string;
   username: string;
   avatarPath: string | null;
+  avatarFrame: string | null;
   text: string;
   kind: string;
   fileName: string | null;
@@ -61,7 +62,9 @@ const emptySocial: SocialData = { friends: [], incoming: [], outgoing: [], resul
 
 export default function HomeHub({
   user,
+  servers,
   onOpenServer,
+  onCreateServer,
   onLogout,
   onUpdateUser,
   activeCall,
@@ -72,7 +75,9 @@ export default function HomeHub({
   callPanel,
 }: {
   user: ToTalkUser;
-  onOpenServer: () => void;
+  servers: CommunityServer[];
+  onOpenServer: (server: CommunityServer) => void;
+  onCreateServer: () => void;
   onLogout: () => Promise<void>;
   onUpdateUser: (user: ToTalkUser) => void;
   activeCall: DirectCall | null;
@@ -274,7 +279,7 @@ export default function HomeHub({
     <div className="friend-row" key={friend.id}>
       <div className="friend-main">
         <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
-          <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar">{friend.isOnline && <i />}</Avatar>
+          <Avatar name={friend.displayName} avatarPath={friend.avatarPath} avatarFrame={friend.avatarFrame} className="friend-avatar">{friend.isOnline && <i />}</Avatar>
         </button>
         <button type="button" className="friend-name-btn" onClick={() => setSelectedFriend(friend)}>
           <b>{friend.displayName}</b><small>@{friend.username}</small>
@@ -289,7 +294,8 @@ export default function HomeHub({
       <nav className="server-rail" aria-label="Навигация">
         <button className="brand-mark active" aria-label="Главная">T</button>
         <span className="rail-divider" />
-        <button className="brand-mark" onClick={onOpenServer} aria-label="Открыть ToTalk">T</button>
+        {servers.map((server) => <button key={server.id} className="server-icon" onClick={() => onOpenServer(server)} aria-label={`Открыть группу ${server.name}`} title={server.name}>{server.name.trim().charAt(0).toUpperCase()}</button>)}
+        <button className="server-icon add" onClick={onCreateServer} aria-label="Создать группу" title="Создать группу"><PlusIcon /></button>
       </nav>
 
       <aside className={`home-sidebar ${mobileNavOpen ? "mobile-open" : ""}`}>
@@ -312,7 +318,7 @@ export default function HomeHub({
           {social.friends.map((friend) => (
             <div className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id}>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
-                <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small">{friend.isOnline && <i />}</Avatar>
+                <Avatar name={friend.displayName} avatarPath={friend.avatarPath} avatarFrame={friend.avatarFrame} className="friend-avatar small">{friend.isOnline && <i />}</Avatar>
               </button>
               <button type="button" className="dm-person-name" onClick={() => { setSelectedFriend(friend); setMobileNavOpen(false); }}>
                 <b>{friend.displayName}</b><small>@{friend.username}</small>
@@ -323,7 +329,7 @@ export default function HomeHub({
         </div>
         <div className="home-user-bar">
           <button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль">
-            <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar>
+            <Avatar name={user.displayName} avatarPath={user.avatarPath} avatarFrame={user.avatarFrame} className="avatar self"><i /></Avatar>
             <span><b>{user.displayName}</b><small>@{user.username}</small></span>
           </button>
           {!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>}
@@ -351,7 +357,7 @@ export default function HomeHub({
               <button type="button" className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Список диалогов"><MenuIcon /></button>
               <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад"><ChevronLeftIcon /></button>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(selectedFriend)} aria-label={`Профиль ${selectedFriend.displayName}`}>
-                <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar">{selectedFriend.isOnline && <i />}</Avatar>
+                <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} avatarFrame={selectedFriend.avatarFrame} className="friend-avatar">{selectedFriend.isOnline && <i />}</Avatar>
               </button>
               <button type="button" className="dm-header-name" onClick={() => setViewedProfile(selectedFriend)}>
                 <b>{selectedFriend.displayName}</b><small>{selectedFriend.isOnline ? "В сети" : `@${selectedFriend.username}`}</small>
@@ -360,10 +366,10 @@ export default function HomeHub({
             </header>
             {callPanel}
             <div className="dm-messages" ref={messagesRef}>
-              {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
+              {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} avatarFrame={selectedFriend.avatarFrame} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
               {timeline.map((item) => item.type === "message" ? (
                 <article className={`dm-message ${item.message.senderId === user.id ? "mine" : ""} ${item.message.kind === "sticker" ? "sticker-message" : ""}`} key={`message-${item.message.id}`}>
-                  <Avatar name={item.message.author} avatarPath={item.message.avatarPath} className="friend-avatar small" />
+                  <Avatar name={item.message.author} avatarPath={item.message.avatarPath} avatarFrame={item.message.avatarFrame} className="friend-avatar small" />
                   <div>
                     <b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time>
                     {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : item.message.kind === "file" ? (

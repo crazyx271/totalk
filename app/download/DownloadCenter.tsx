@@ -62,8 +62,8 @@ export default function DownloadCenter() {
           <h2>macOS</h2>
           <p>Отдельные сборки для новых Mac с Apple Silicon и моделей на Intel.</p>
           <div className="download-card-actions">
-            <a className="download-action" href="/downloads/ToTalk-0.2.0-mac-arm64.dmg" download><DownloadIcon />Apple Silicon</a>
-            <a className="download-action secondary" href="/downloads/ToTalk-0.2.0-mac-x64.dmg" download>Intel</a>
+            <a className="download-action" href="/downloads/ToTalk-0.2.1-mac-arm64.dmg" download><DownloadIcon />Apple Silicon</a>
+            <a className="download-action secondary" href="/downloads/ToTalk-0.2.1-mac-x64.dmg" download>Intel</a>
           </div>
           <small>Пока без подписи Apple — при первом запуске используйте правую кнопку → «Открыть».</small>
           {platform === "mac" && <small className="recommended-label">Рекомендуется для вас</small>}

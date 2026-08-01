@@ -7,12 +7,15 @@ import { WindowMaximizeIcon, WindowMinimizeIcon, WindowRestoreIcon, XIcon } from
 declare global {
   interface Window {
     totalkDesktop?: {
-      minimizeWindow: () => void;
-      toggleMaximizeWindow: () => void;
-      closeWindow: () => void;
+      minimizeWindow: () => Promise<boolean>;
+      toggleMaximizeWindow: () => Promise<boolean>;
+      closeWindow: () => Promise<boolean>;
       isWindowMaximized: () => Promise<boolean>;
+      toggleFullscreenWindow: () => Promise<boolean>;
+      isWindowFullscreen: () => Promise<boolean>;
       showNotification: (payload: { title: string; body: string }) => Promise<boolean>;
       onWindowMaximizedChange: (callback: (maximized: boolean) => void) => () => void;
+      onWindowFullscreenChange: (callback: (fullscreen: boolean) => void) => () => void;
     };
   }
 }
@@ -40,11 +43,11 @@ export default function DesktopTitleBar() {
     <div className="desktop-titlebar">
       <div className="desktop-titlebar-brand"><span>T</span>ToTalk</div>
       <div className="desktop-titlebar-controls">
-        <button type="button" onClick={() => window.totalkDesktop?.minimizeWindow()} aria-label="Свернуть"><WindowMinimizeIcon /></button>
-        <button type="button" onClick={() => window.totalkDesktop?.toggleMaximizeWindow()} aria-label={maximized ? "Восстановить" : "Развернуть"}>
+        <button type="button" onClick={() => void window.totalkDesktop?.minimizeWindow()} aria-label="Свернуть"><WindowMinimizeIcon /></button>
+        <button type="button" onClick={() => void window.totalkDesktop?.toggleMaximizeWindow()} aria-label={maximized ? "Восстановить" : "Развернуть"}>
           {maximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
         </button>
-        <button type="button" className="desktop-titlebar-close" onClick={() => window.totalkDesktop?.closeWindow()} aria-label="Закрыть"><XIcon /></button>
+        <button type="button" className="desktop-titlebar-close" onClick={() => void window.totalkDesktop?.closeWindow()} aria-label="Закрыть"><XIcon /></button>
       </div>
     </div>
   );

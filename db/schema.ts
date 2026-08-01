@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -10,11 +10,42 @@ export const users = sqliteTable("users", {
   avatarPath: text("avatar_path"),
   bio: text("bio"),
   bannerColor: text("banner_color"),
+  bannerPath: text("banner_path"),
+  avatarFrame: text("avatar_frame"),
   lastActiveAt: integer("last_active_at"),
   isUltra: integer("is_ultra", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("users_username_unique").on(table.username),
+]);
+
+export const servers = sqliteTable("servers", {
+  id: text("id").primaryKey(),
+  ownerId: integer("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("servers_owner_idx").on(table.ownerId),
+]);
+
+export const serverMembers = sqliteTable("server_members", {
+  serverId: text("server_id").notNull().references(() => servers.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  primaryKey({ columns: [table.serverId, table.userId] }),
+  index("server_members_user_idx").on(table.userId),
+]);
+
+export const serverChannels = sqliteTable("server_channels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  serverId: text("server_id").notNull().references(() => servers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  kind: text("kind").notNull().default("text"),
+  position: integer("position").notNull().default(0),
+}, (table) => [
+  index("server_channels_server_idx").on(table.serverId, table.position),
 ]);
 
 export const sessions = sqliteTable("sessions", {

@@ -16,6 +16,7 @@ export type VoiceParticipant = {
   displayName: string;
   username: string;
   avatarPath: string | null;
+  avatarFrame: string | null;
 };
 
 type IceServerConfig = {
@@ -362,6 +363,10 @@ export function useVoiceChat(serverId: string) {
 
   const startVideoTrack = useCallback(async (source: "camera" | "screen") => {
     if (!streamRef.current) return;
+    if (source === "screen" && !navigator.mediaDevices?.getDisplayMedia) {
+      setError("Демонстрация экрана недоступна в этой версии приложения");
+      return;
+    }
     stopVideoTrack();
     try {
       const preferredCamera = getVideoInputId();
@@ -369,7 +374,7 @@ export function useVoiceChat(serverId: string) {
         ? await navigator.mediaDevices.getUserMedia({
           video: { ...CAMERA_CONSTRAINTS, ...(preferredCamera ? { deviceId: { ideal: preferredCamera } } : {}) },
         })
-        : await navigator.mediaDevices.getDisplayMedia({ video: true });
+        : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       const [track] = mediaStream.getVideoTracks();
       if (!track || !streamRef.current) return;
       track.onended = stopVideoTrack;
@@ -378,8 +383,11 @@ export function useVoiceChat(serverId: string) {
       connectionsRef.current.forEach((connection) => connection.addTrack(track, streamRef.current!));
       if (source === "camera") setCameraOn(true);
       else setScreenSharing(true);
-    } catch {
-      setError(source === "camera" ? "Не удалось получить доступ к камере" : "Не удалось начать демонстрацию экрана");
+    } catch (mediaError) {
+      const denied = mediaError instanceof DOMException && ["NotAllowedError", "PermissionDeniedError"].includes(mediaError.name);
+      setError(source === "camera"
+        ? (denied ? "Доступ к камере запрещён в настройках системы" : "Не удалось получить доступ к камере")
+        : (denied ? "Вы отменили выбор экрана или доступ запрещён системой" : "Не удалось начать демонстрацию экрана"));
     }
   }, [stopVideoTrack]);
 

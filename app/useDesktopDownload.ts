@@ -24,11 +24,11 @@ export function useDesktopDownload() {
     const selectMacBuild = (architecture?: string) => {
       const intel = /x86|x64|amd64/i.test(architecture ?? "");
       setDownload(intel ? {
-        href: "/downloads/ToTalk-0.2.0-mac-x64.dmg",
+        href: "/downloads/ToTalk-0.2.1-mac-x64.dmg",
         label: "Скачать для Mac с Intel",
         platform: "mac-x64",
       } : {
-        href: "/downloads/ToTalk-0.2.0-mac-arm64.dmg",
+        href: "/downloads/ToTalk-0.2.1-mac-arm64.dmg",
         label: "Скачать для Mac",
         platform: "mac-arm64",
       });

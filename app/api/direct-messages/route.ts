@@ -22,6 +22,7 @@ export async function GET(request: Request) {
       author: users.displayName,
       username: users.username,
       avatarPath: users.avatarPath,
+      avatarFrame: users.avatarFrame,
       text: directMessages.content,
       kind: directMessages.kind,
       fileName: directMessages.fileName,
@@ -63,5 +64,5 @@ export async function POST(request: Request) {
     content: text,
     kind,
   }).returning({ id: directMessages.id, text: directMessages.content, kind: directMessages.kind, createdAt: directMessages.createdAt });
-  return Response.json({ message: { ...message, senderId: currentUser.id, author: currentUser.displayName, username: currentUser.username, avatarPath: currentUser.avatarPath } }, { status: 201 });
+  return Response.json({ message: { ...message, senderId: currentUser.id, author: currentUser.displayName, username: currentUser.username, avatarPath: currentUser.avatarPath, avatarFrame: currentUser.avatarFrame } }, { status: 201 });
 }

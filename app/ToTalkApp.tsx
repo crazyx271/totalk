@@ -11,8 +11,8 @@ import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
 import type { ToTalkUser } from "./page";
-import type { DirectCall, Friend } from "./callTypes";
-import { DownloadIcon, LogOutIcon, MenuIcon, PaperclipIcon, PhoneIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon } from "./Icons";
+import type { CommunityServer, DirectCall, Friend } from "./callTypes";
+import { DownloadIcon, LogOutIcon, MenuIcon, PaperclipIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { MicIcon, MicOffIcon, PhoneOffIcon } from "./CallIcons";
 import { enableBrowserNotifications, showToTalkNotification } from "./notifications";
@@ -24,6 +24,7 @@ type Message = {
   username?: string;
   avatar: string;
   avatarPath: string | null;
+  avatarFrame: string | null;
   time: string;
   text: string;
   kind: string;
@@ -33,15 +34,7 @@ type Message = {
   mine?: boolean;
 };
 
-const workspace = {
-  id: "totalk",
-  short: "T",
-  name: "ToTalk",
-  subtitle: "Основной workspace",
-  tone: "brand",
-  channels: ["чат"],
-  voiceChannels: ["Голосовой"],
-} as const;
+const EMPTY_WORKSPACE = { id: "none", short: "?", name: "Группа", subtitle: "", channels: [] as string[], voiceChannels: [] as string[] };
 
 type ToTalkAppProps = {
   user: ToTalkUser;
@@ -51,10 +44,25 @@ type ToTalkAppProps = {
 
 export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppProps) {
   const [homeMode, setHomeMode] = useState(true);
-  const [channel, setChannel] = useState(workspace.channels[0]);
+  const [servers, setServers] = useState<CommunityServer[]>([]);
+  const [activeServerId, setActiveServerId] = useState<string | null>(null);
+  const [showCreateServer, setShowCreateServer] = useState(false);
+  const [creatingServer, setCreatingServer] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const activeServer = servers.find((server) => server.id === activeServerId) ?? null;
+  const workspace = activeServer ? {
+    id: activeServer.id,
+    short: activeServer.name.trim().charAt(0).toUpperCase() || "?",
+    name: activeServer.name,
+    subtitle: activeServer.ownerId === user.id ? "Ваша группа" : "Сообщество",
+    channels: activeServer.channels.filter((item) => item.kind === "text").map((item) => item.name),
+    voiceChannels: activeServer.channels.filter((item) => item.kind === "voice").map((item) => item.name),
+  } : EMPTY_WORKSPACE;
+  const [channel, setChannel] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const channelFileRef = useRef<HTMLInputElement | null>(null);
+  const temporaryMessageIdRef = useRef(-1);
   const [draft, setDraft] = useState("");
   const [connection, setConnection] = useState<"loading" | "online" | "error">("loading");
   const [sending, setSending] = useState(false);
@@ -65,6 +73,22 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   const date = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
   const voice = useVoiceChat(workspace.id);
   const isDesktop = useIsDesktopApp();
+
+  const loadServers = useCallback(async () => {
+    const response = await fetch("/api/servers", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json() as { servers: CommunityServer[] };
+    setServers(data.servers);
+    if (activeServerId && !data.servers.some((server) => server.id === activeServerId)) {
+      setActiveServerId(null);
+      setHomeMode(true);
+    }
+  }, [activeServerId]);
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => void loadServers(), 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [loadServers]);
 
   useEffect(() => {
     const container = messagesRef.current;
@@ -114,12 +138,13 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   }, []);
 
   const loadMessages = useCallback(async () => {
+    if (!activeServerId || !channel) return;
     try {
-      const query = new URLSearchParams({ server: workspace.id, channel });
+      const query = new URLSearchParams({ server: activeServerId, channel });
       const response = await fetch(`/api/messages?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("messages unavailable");
       const data = await response.json() as {
-        messages: Array<{ id: number; userId: number; author: string; username: string; avatarPath: string | null; text: string; kind: string; fileName: string | null; fileMime: string | null; fileSize: number | null; createdAt: string }>;
+        messages: Array<{ id: number; userId: number; author: string; username: string; avatarPath: string | null; avatarFrame: string | null; text: string; kind: string; fileName: string | null; fileMime: string | null; fileSize: number | null; createdAt: string }>;
       };
       setMessages(data.messages.map((message) => ({
         id: message.id,
@@ -128,6 +153,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         username: message.username,
         avatar: message.author.trim().charAt(0).toUpperCase() || "?",
         avatarPath: message.avatarPath,
+        avatarFrame: message.avatarFrame,
         time: new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }).format(new Date(`${message.createdAt}Z`)),
         text: message.text,
         kind: message.kind,
@@ -140,7 +166,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     } catch {
       setConnection("error");
     }
-  }, [channel, user.id]);
+  }, [activeServerId, channel, user.id]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadMessages(), 0);
@@ -246,10 +272,46 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     await dmVoice.leave();
   }
 
-  function openWorkspace() {
-    setChannel(workspace.channels[0]);
+  function openWorkspace(server: CommunityServer) {
+    const firstTextChannel = server.channels.find((item) => item.kind === "text")?.name ?? "";
+    setActiveServerId(server.id);
+    setChannel(firstTextChannel);
     setHomeMode(false);
     setMobilePanel(null);
+  }
+
+  async function createServer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreatingServer(true);
+    setServerError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/servers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: String(form.get("name") ?? "") }) });
+      const data = await response.json() as { server?: CommunityServer; error?: string };
+      if (!response.ok || !data.server) throw new Error(data.error ?? "Не удалось создать группу");
+      setServers((current) => [...current, data.server!]);
+      setShowCreateServer(false);
+      openWorkspace(data.server);
+    } catch (createError) {
+      setServerError(createError instanceof Error ? createError.message : "Не удалось создать группу");
+    } finally {
+      setCreatingServer(false);
+    }
+  }
+
+  async function deleteActiveServer() {
+    if (!activeServer || activeServer.ownerId !== user.id) return;
+    if (!window.confirm(`Удалить группу «${activeServer.name}»? Сообщения группы будут удалены.`)) return;
+    const response = await fetch(`/api/servers?id=${encodeURIComponent(activeServer.id)}`, { method: "DELETE" });
+    if (!response.ok) {
+      setConnection("error");
+      return;
+    }
+    if (voice.room) await voice.leave();
+    setServers((current) => current.filter((server) => server.id !== activeServer.id));
+    setActiveServerId(null);
+    setChannel("");
+    setHomeMode(true);
   }
 
   async function sendMessage(event: FormEvent) {
@@ -258,7 +320,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     if (!text || sending) return;
     setSending(true);
     setDraft("");
-    const temporaryId = -Date.now();
+    const temporaryId = temporaryMessageIdRef.current--;
     setMessages((current) => [...current, {
       id: temporaryId,
       userId: user.id,
@@ -266,6 +328,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       username: user.username,
       avatar: user.displayName.charAt(0).toUpperCase() || "В",
       avatarPath: user.avatarPath,
+      avatarFrame: user.avatarFrame,
       time: date.format(new Date()),
       text,
       kind: "text",
@@ -290,7 +353,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
 
   async function sendSticker(sticker: Sticker) {
     setShowStickers(false);
-    const temporaryId = -Date.now();
+    const temporaryId = temporaryMessageIdRef.current--;
     setMessages((current) => [...current, {
       id: temporaryId,
       userId: user.id,
@@ -298,6 +361,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       username: user.username,
       avatar: user.displayName.charAt(0).toUpperCase() || "В",
       avatarPath: user.avatarPath,
+      avatarFrame: user.avatarFrame,
       time: date.format(new Date()),
       text: sticker,
       kind: "sticker",
@@ -345,6 +409,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       error={dmVoice.error}
       selfName={user.displayName}
       selfAvatarPath={user.avatarPath}
+      selfAvatarFrame={user.avatarFrame}
       participants={dmVoice.participants}
       localStream={dmVoice.localStream}
       remoteStreams={dmVoice.remoteStreams}
@@ -361,14 +426,14 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   const callToastAndDock = (
     <>
       {incomingCall && <div className="call-toast">
-        <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} className="friend-avatar" />
+        <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} avatarFrame={incomingCall.person.avatarFrame} className="friend-avatar" />
         <div><small>ВХОДЯЩИЙ ЗВОНОК</small><b>{incomingCall.person.displayName}</b></div>
         <button className="accept-call" onClick={() => void acceptCall(incomingCall)} aria-label="Принять звонок"><PhoneIcon /></button>
         <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")} aria-label="Отклонить звонок"><PhoneOffIcon /></button>
       </div>}
       {activeCall && (!homeMode || selectedDmFriendId !== activeCall.person.id) && <div className="compact-call-dock">
         <button type="button" className="compact-call-main" onClick={() => { setHomeMode(true); setFocusFriendId(activeCall.person.id); }}>
-          <Avatar name={activeCall.person.displayName} avatarPath={activeCall.person.avatarPath} className="friend-avatar small" />
+          <Avatar name={activeCall.person.displayName} avatarPath={activeCall.person.avatarPath} avatarFrame={activeCall.person.avatarFrame} className="friend-avatar small" />
           <span><small>ТЕКУЩИЙ ЗВОНОК</small><b>{activeCall.person.displayName}</b></span>
         </button>
         <button type="button" onClick={dmVoice.toggleMute} aria-label={dmVoice.muted ? "Включить микрофон" : "Выключить микрофон"}>{dmVoice.muted ? <MicOffIcon /> : <MicIcon />}</button>
@@ -377,13 +442,31 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     </>
   );
 
-  if (homeMode) {
+  const createServerModal = showCreateServer ? (
+    <div className="modal-scrim" onClick={() => setShowCreateServer(false)}>
+      <section className="modal-card create-server-card" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={() => setShowCreateServer(false)} aria-label="Закрыть"><XIcon /></button>
+        <span className="create-server-icon"><PlusIcon /></span>
+        <h2>Создать свою группу</h2>
+        <p>Название можно будет изменить позже. Мы сразу добавим текстовый и голосовой канал.</p>
+        <form onSubmit={createServer}>
+          <label>Название группы<input name="name" minLength={2} maxLength={32} required autoFocus placeholder="Например, Ночная команда" /></label>
+          {serverError && <div className="auth-error">{serverError}</div>}
+          <button className="auth-submit" disabled={creatingServer}>{creatingServer ? "Создаём…" : "Создать группу"}</button>
+        </form>
+      </section>
+    </div>
+  ) : null;
+
+  if (homeMode || !activeServer) {
     return (
       <>
         <HomeHub
           user={user}
+          servers={servers}
           onLogout={onLogout}
           onOpenServer={openWorkspace}
+          onCreateServer={() => { setServerError(""); setShowCreateServer(true); }}
           onUpdateUser={onUpdateUser}
           activeCall={activeCall}
           onStartCall={startCall}
@@ -393,16 +476,18 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           callPanel={activeCall && selectedDmFriendId === activeCall.person.id ? dmCallView : undefined}
         />
         {callToastAndDock}
+        {createServerModal}
       </>
     );
   }
 
   const liveMembers = [
-    { key: `self-${user.id}`, name: user.displayName, avatarPath: user.avatarPath, status: voice.room ? `В голосе: ${voice.room}` : `@${user.username}` },
+    { key: `self-${user.id}`, name: user.displayName, avatarPath: user.avatarPath, avatarFrame: user.avatarFrame, status: voice.room ? `В голосе: ${voice.room}` : `@${user.username}` },
     ...voice.participants.map((participant) => ({
       key: participant.peerId,
       name: participant.displayName,
       avatarPath: participant.avatarPath,
+      avatarFrame: participant.avatarFrame,
       status: `@${participant.username}`,
     })),
   ];
@@ -413,27 +498,21 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         <nav className="server-rail" aria-label="Серверы">
           <button className="server-icon home-shortcut" onClick={() => setHomeMode(true)} aria-label="Главная">⌂</button>
           <span className="rail-divider" />
-          <div className="server-slot">
-            <button
-              onClick={openWorkspace}
-              className="brand-mark active"
-              aria-label="Открыть ToTalk"
-              aria-pressed="true"
-            >{workspace.short}</button>
-          </div>
+          {servers.map((server) => <div className="server-slot" key={server.id}><button onClick={() => openWorkspace(server)} className={`server-icon ${server.id === activeServerId ? "active" : ""}`} aria-label={`Открыть группу ${server.name}`} aria-pressed={server.id === activeServerId}>{server.name.trim().charAt(0).toUpperCase()}</button></div>)}
+          <button className="server-icon add" onClick={() => { setServerError(""); setShowCreateServer(true); }} aria-label="Создать группу"><PlusIcon /></button>
         </nav>
 
         <aside className={`channel-panel ${mobilePanel === "channels" ? "mobile-open" : ""}`}>
-          <div className="workspace-title"><span><b>{workspace.name}</b><small>{workspace.subtitle}</small></span><span className={`connection ${connection}`}>{connection === "online" ? "● онлайн" : connection === "loading" ? "○ вход…" : "● нет связи"}</span></div>
+          <div className="workspace-title"><span><b>{workspace.name}</b><small>{workspace.subtitle}</small></span><div className="workspace-actions"><span className={`connection ${connection}`}>{connection === "online" ? "● онлайн" : connection === "loading" ? "○ вход…" : "● нет связи"}</span>{activeServer.ownerId === user.id && <button type="button" className="delete-server-button" onClick={() => void deleteActiveServer()} aria-label="Удалить группу" title="Удалить группу"><XIcon /></button>}</div></div>
           <div className="channel-scroll">
             <div className="section-label"><span>ТЕКСТОВЫЕ КАНАЛЫ</span></div>
             {workspace.channels.map((item) => <button key={item} onClick={() => { setChannel(item); setMobilePanel(null); }} className={`channel ${channel === item ? "selected" : ""}`}><span>#</span>{item}</button>)}
             <div className="section-label"><span>ГОЛОСОВЫЕ КАНАЛЫ</span></div>
             {workspace.voiceChannels.map((item) => <button key={item} onClick={() => void voice.join(item)} className={`channel ${voice.room === item ? "selected voice-active" : ""}`}><span>♫</span>{item}{voice.room === item && <em>{voice.participantCount}</em>}</button>)}
-            {voice.room && <div className="voice-users"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="mini-avatar" /><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
+            {voice.room && <div className="voice-users"><Avatar name={user.displayName} avatarPath={user.avatarPath} avatarFrame={user.avatarFrame} className="mini-avatar" /><div><b>{user.displayName}</b><small>{voice.status === "joining" ? "Подключение…" : `${voice.participantCount} в эфире`}</small></div></div>}
             {voice.room && voice.participants.map((participant) => (
               <div className="voice-users remote-voice-user" key={participant.peerId}>
-                <Avatar name={participant.displayName} avatarPath={participant.avatarPath} className="mini-avatar" />
+                <Avatar name={participant.displayName} avatarPath={participant.avatarPath} avatarFrame={participant.avatarFrame} className="mini-avatar" />
                 <div><b>{participant.displayName}</b><small>@{participant.username} · в эфире</small></div>
                 <i className="voice-live-dot" aria-label="Подключён" />
               </div>
@@ -441,7 +520,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
             {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
             {voice.error && <div className="voice-error">{voice.error}</div>}
           </div>
-          <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? <MicOffIcon /> : <MicIcon />}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал"><PhoneOffIcon /></button></>}{!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>}<button onClick={() => setShowSettings(true)} aria-label="Настройки"><SettingsIcon /></button><button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button></div>
+          <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} avatarFrame={user.avatarFrame} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? <MicOffIcon /> : <MicIcon />}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал"><PhoneOffIcon /></button></>}{!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>}<button onClick={() => setShowSettings(true)} aria-label="Настройки"><SettingsIcon /></button><button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button></div>
           {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
           {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
         </aside>
@@ -458,7 +537,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
             <div className="day-divider"><span>Сегодня</span></div>
             {messages.map((message) => (
               <article className={`message ${message.mine ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
-                <Avatar name={message.author} avatarPath={message.avatarPath} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />
+                <Avatar name={message.author} avatarPath={message.avatarPath} avatarFrame={message.avatarFrame} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />
                 <div>
                   <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>
                   {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : message.kind === "file" ? (
@@ -482,7 +561,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
 
         <aside className={`member-panel ${mobilePanel === "members" ? "mobile-open" : ""}`}>
           <div className="member-title">УЧАСТНИКИ — {liveMembers.length}</div>
-          {liveMembers.map((member) => <button className="member" key={member.key}><Avatar name={member.name} avatarPath={member.avatarPath} className={`avatar avatar-${member.name.charCodeAt(0) % 4}`}><i /></Avatar><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
+          {liveMembers.map((member) => <button className="member" key={member.key}><Avatar name={member.name} avatarPath={member.avatarPath} avatarFrame={member.avatarFrame} className={`avatar avatar-${member.name.charCodeAt(0) % 4}`}><i /></Avatar><span><b>{member.name}</b><small>{member.status}</small></span></button>)}
         </aside>
         {mobilePanel && <button className="scrim" onClick={() => setMobilePanel(null)} aria-label="Закрыть панель" />}
         {voice.room && (
@@ -492,6 +571,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
             error={voice.error}
             selfName={user.displayName}
             selfAvatarPath={user.avatarPath}
+            selfAvatarFrame={user.avatarFrame}
             participants={voice.participants}
             localStream={voice.localStream}
             remoteStreams={voice.remoteStreams}
@@ -506,6 +586,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         )}
       </main>
       {callToastAndDock}
+      {createServerModal}
     </>
   );
 }

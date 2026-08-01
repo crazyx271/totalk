@@ -12,8 +12,8 @@ button, input { font:inherit; }
 .desktop-titlebar{display:flex;align-items:center;justify-content:space-between;height:36px;padding:0 0 0 12px;background:#0d0e12;border-bottom:1px solid #1c1d23;-webkit-app-region:drag;flex:none}
 .desktop-titlebar-brand{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#c7c8d1;letter-spacing:.02em}
 .desktop-titlebar-brand span{display:grid;place-items:center;width:18px;height:18px;border-radius:6px;background:linear-gradient(145deg,#9688ff,#6958df);font-size:11px;font-weight:900;color:#fff}
-.desktop-titlebar-controls{display:flex;height:100%;-webkit-app-region:no-drag}
-.desktop-titlebar-controls button{width:46px;height:100%;border:0;border-radius:0;background:transparent;color:#9a9cac;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.desktop-titlebar-controls{display:flex;height:100%;position:relative;z-index:1000;-webkit-app-region:no-drag;pointer-events:auto}
+.desktop-titlebar-controls button{width:46px;height:100%;border:0;border-radius:0;background:transparent;color:#9a9cac;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-app-region:no-drag;pointer-events:auto}
 .desktop-titlebar-controls button:hover{background:#1c1d23;color:#fff}
 .desktop-titlebar-controls button.desktop-titlebar-close:hover{background:#e0424f;color:#fff}
 .desktop-titlebar-controls svg{width:13px;height:13px}
@@ -171,6 +171,7 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .workspace-title .connection{font-size:10px;font-weight:700;color:#858899;white-space:nowrap}
 .workspace-title .connection.online{color:#57c991}
 .workspace-title .connection.error{color:#ee7182}
+.workspace-actions{display:flex!important;flex-direction:row!important;align-items:center;gap:7px}.workspace-actions .delete-server-button{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:#ee526914;color:#ee7182}.workspace-actions .delete-server-button:hover{background:#ee52692b;color:#fff}.workspace-actions .delete-server-button svg{width:15px;height:15px}
 .user-bar b,.user-bar small{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .user-bar-identity{flex:1;display:flex;align-items:center;gap:8px;min-width:0;border:0;background:none;color:inherit;cursor:pointer;text-align:left;padding:4px;border-radius:8px}
@@ -196,6 +197,11 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .settings-toggle input{width:18px;height:18px;accent-color:var(--accent);flex:none}
 
 .profile-banner{height:104px;background:linear-gradient(135deg,#9688ff,#6958df);position:relative}
+.profile-banner.has-image{background-size:cover;background-position:center;isolation:isolate}
+.profile-banner.has-image:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,#0005);pointer-events:none;z-index:0}
+.profile-banner>.profile-avatar-edit{z-index:2}
+.profile-banner-edit{position:absolute;top:50%;left:50%;z-index:2;transform:translate(-50%,-50%);height:36px;padding:0 13px;border:1px solid #ffffff2b;border-radius:10px;background:#101218c7;color:#fff;display:flex;align-items:center;gap:7px;opacity:0;cursor:pointer;backdrop-filter:blur(8px);transition:opacity .16s ease,transform .16s ease}
+.profile-banner:hover .profile-banner-edit,.profile-banner-edit:focus-visible{opacity:1;transform:translate(-50%,-50%) scale(1.02)}.profile-banner-edit svg{width:15px;height:15px}.profile-banner-edit span{font-size:11px;font-weight:700}
 .profile-avatar-edit{position:absolute;left:26px;bottom:-44px;border:0;background:none;padding:0;cursor:pointer;border-radius:50%}
 .avatar.profile-avatar-large{width:116px;height:116px;font-size:42px;border:6px solid #1d1e24;box-shadow:0 6px 18px #0004}
 .profile-avatar-edit-label{position:absolute;right:0;bottom:2px;width:34px;height:34px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:13px;border:3px solid #1d1e24;color:#fff;transition:transform .15s ease}
@@ -213,6 +219,8 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .banner-swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:transform .12s ease,box-shadow .12s ease}
 .banner-swatch:hover{transform:scale(1.12)}
 .banner-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px #ffffff33}
+.field-hint{color:#777f91;font-size:10px;font-weight:500;margin-left:5px}.avatar-frame-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.avatar-frame-option{min-width:0;padding:9px 5px;border:1px solid #343640;border-radius:11px;background:#15171d;color:#8e91a5;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;font-size:9px}.avatar-frame-option.selected{border-color:#8c7ff5;background:#7669ec17;color:#fff}.avatar.frame-preview{width:38px;height:38px;font-size:13px}.profile-banner-remove{align-self:flex-start;border:0;background:transparent;color:#e28595;padding:0;cursor:pointer;font-size:11px;text-decoration:underline}
+.avatar-frame{isolation:isolate}.avatar-frame-neon{box-shadow:0 0 0 3px #a46cff,0 0 14px 4px #7b5cffaa,0 0 22px 7px #36d6e766!important}.avatar-frame-comet{box-shadow:0 0 0 3px #ffb14a,7px -5px 14px #ff5b69aa,-6px 6px 15px #8d6dffaa!important}.avatar-frame-emerald{box-shadow:0 0 0 3px #43dda0,0 0 0 6px #43dda026,0 0 17px #25c98288!important}
 .profile-bio{padding:0 24px;margin:0 0 12px;color:#c7c8d1;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .profile-badges{display:flex;flex-wrap:wrap;gap:6px;padding:0 24px 4px}
 .profile-badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px 0 8px;border-radius:20px;background:#25262e;border:1px solid #34353f;color:#a3a5b3;font-size:11px;font-weight:600;white-space:nowrap}
@@ -231,6 +239,7 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .profile-action{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:11px;border:0;cursor:pointer;font-weight:600;font-size:13px;background:#30323b;color:#fff}
 .profile-action.primary{background:linear-gradient(135deg,#8d7df7,#6b59df);color:#fff;box-shadow:0 8px 20px #6b59df33}
 .profile-action svg{width:15px;height:15px}
+.create-server-card{width:min(420px,100%);padding:30px}.create-server-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#8677f4,#4f9c99);color:#fff}.create-server-icon svg{width:22px;height:22px}.create-server-card h2{margin:20px 0 8px}.create-server-card>p{margin:0 0 22px;color:#959cad;font-size:13px;line-height:1.55}.create-server-card form,.create-server-card label{display:flex;flex-direction:column;gap:9px}.create-server-card label{font-size:11px;font-weight:750;color:#b8bdca}.create-server-card input{height:45px;padding:0 12px;border:1px solid #383d49;border-radius:10px;background:#11141a;color:#fff;outline:0}.create-server-card input:focus{border-color:#8175ef;box-shadow:0 0 0 3px #776bea22}.create-server-card .auth-submit{margin-top:9px}
 @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .user-bar button[aria-label="Выйти"]{border:0;background:transparent;color:#aaa;cursor:pointer;padding:8px;border-radius:8px}
 .user-bar button[aria-label="Выйти"]:hover{background:#292a31;color:#fff}
@@ -388,8 +397,8 @@ body{background:var(--canvas)}
 .voice-overlay-embedded .call-tile{aspect-ratio:16/9;background:#10131a}
 .voice-overlay-embedded .voice-overlay-header{min-height:44px}
 .voice-overlay-embedded .voice-overlay-controls{margin-top:auto}
-.voice-overlay:fullscreen{position:fixed;inset:0;transform:none;width:100vw;height:100vh;max-width:none!important;max-height:none;border-radius:0;background:#06070a;padding:24px}
-.voice-overlay:fullscreen .call-tile-grid{width:100%;flex:1}
+.voice-overlay:fullscreen,.voice-overlay.call-fullscreen-active{position:fixed;inset:0;transform:none;width:100vw;height:100vh;max-width:none!important;max-height:none;border-radius:0;background:#06070a;padding:24px;z-index:100}
+.voice-overlay:fullscreen .call-tile-grid,.voice-overlay.call-fullscreen-active .call-tile-grid{width:100%;flex:1}
 .call-stage-expand{margin-left:8px;width:34px;height:34px;border:1px solid #ffffff12;border-radius:10px;background:#222630;color:#daddE7;display:grid;place-items:center;cursor:pointer}.call-stage-expand svg{width:16px;height:16px}
 
 .compact-call-dock{position:fixed;left:80px;bottom:12px;z-index:17;width:250px;display:flex;align-items:center;gap:5px;padding:8px;border:1px solid #ffffff17;border-radius:14px;background:#171b24f2;box-shadow:0 18px 50px #0009;backdrop-filter:blur(18px)}

@@ -10,6 +10,7 @@ type Tile = {
   key: string;
   name: string;
   avatarPath?: string | null;
+  avatarFrame?: string | null;
   sub?: string;
   stream: MediaStream | null;
   isLocal?: boolean;
@@ -57,7 +58,7 @@ function CallTile({ tile, focused, focusable, onToggleFocus }: {
       role={focusable ? "button" : undefined}
     >
       <video ref={videoRef} autoPlay playsInline muted={tile.isLocal} className={tile.isLocal && !tile.sharingScreen ? "mirrored" : ""} />
-      <Avatar name={tile.name} avatarPath={tile.avatarPath} className="call-tile-avatar" />
+      <Avatar name={tile.name} avatarPath={tile.avatarPath} avatarFrame={tile.avatarFrame} className="call-tile-avatar" />
       {tile.sharingScreen && <span className="call-tile-badge" aria-label="Демонстрация экрана"><MonitorIcon /></span>}
       {hasVideo && (
         <button type="button" className="call-tile-expand" onClick={toggleFullscreen} aria-label={isFullscreen ? "Свернуть" : "На весь экран"}>
@@ -82,6 +83,7 @@ export type VoiceCallOverlayProps = {
   error?: string;
   selfName: string;
   selfAvatarPath?: string | null;
+  selfAvatarFrame?: string | null;
   participants: VoiceParticipant[];
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
@@ -101,6 +103,7 @@ export default function VoiceCallOverlay({
   error,
   selfName,
   selfAvatarPath,
+  selfAvatarFrame,
   participants,
   localStream,
   remoteStreams,
@@ -115,11 +118,12 @@ export default function VoiceCallOverlay({
   const callRef = useRef<HTMLDivElement | null>(null);
   const [callFullscreen, setCallFullscreen] = useState(false);
   const tiles: Tile[] = [
-    { key: "self", name: selfName, avatarPath: selfAvatarPath, sub: "Вы", stream: localStream, isLocal: true, sharingScreen: screenSharing },
+    { key: "self", name: selfName, avatarPath: selfAvatarPath, avatarFrame: selfAvatarFrame, sub: "Вы", stream: localStream, isLocal: true, sharingScreen: screenSharing },
     ...participants.map((participant) => ({
       key: participant.peerId,
       name: participant.displayName,
       avatarPath: participant.avatarPath,
+      avatarFrame: participant.avatarFrame,
       sub: `@${participant.username}`,
       stream: remoteStreams.get(participant.peerId) ?? null,
     })),
@@ -152,20 +156,30 @@ export default function VoiceCallOverlay({
   useEffect(() => {
     const onFullscreen = () => setCallFullscreen(document.fullscreenElement === callRef.current);
     document.addEventListener("fullscreenchange", onFullscreen);
-    return () => document.removeEventListener("fullscreenchange", onFullscreen);
+    const removeNativeListener = window.totalkDesktop?.onWindowFullscreenChange(setCallFullscreen);
+    return () => { document.removeEventListener("fullscreenchange", onFullscreen); removeNativeListener?.(); };
   }, []);
+
+  async function toggleCallFullscreen() {
+    if (window.totalkDesktop) {
+      setCallFullscreen(await window.totalkDesktop.toggleFullscreenWindow());
+      return;
+    }
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await callRef.current?.requestFullscreen();
+  }
 
   return (
     <>
       {variant === "overlay" && hasAnyVideo && <div className="voice-overlay-backdrop" />}
-      <div ref={callRef} className={`voice-overlay voice-overlay-${variant} ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
+      <div ref={callRef} className={`voice-overlay voice-overlay-${variant} ${hasAnyVideo ? "voice-overlay-video" : ""} ${callFullscreen ? "call-fullscreen-active" : ""}`}>
       <div className="voice-overlay-header">
-        <Avatar name={selfName} avatarPath={selfAvatarPath} className={`voice-pulse ${connected ? "" : "ringing"}`} />
+        <Avatar name={selfName} avatarPath={selfAvatarPath} avatarFrame={selfAvatarFrame} className={`voice-pulse ${connected ? "" : "ringing"}`} />
         <div>
           <b>{title}</b>
           <small>{connected ? formatDuration(elapsed) : subtitle}</small>
         </div>
-        <button type="button" className="call-stage-expand" onClick={() => document.fullscreenElement ? void document.exitFullscreen() : void callRef.current?.requestFullscreen()} aria-label={callFullscreen ? "Выйти из полноэкранного режима" : "На весь экран"}>
+        <button type="button" className="call-stage-expand" onClick={() => void toggleCallFullscreen()} aria-label={callFullscreen ? "Выйти из полноэкранного режима" : "На весь экран"}>
           {callFullscreen ? <MinimizeIcon /> : <ExpandIcon />}
         </button>
       </div>

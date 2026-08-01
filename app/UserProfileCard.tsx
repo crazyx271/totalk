@@ -13,6 +13,8 @@ export type ProfileViewedUser = {
   avatarPath: string | null;
   bio: string | null;
   bannerColor: string | null;
+  bannerPath: string | null;
+  avatarFrame: string | null;
   createdAt: string;
   isOnline: boolean;
   isUltra: boolean;
@@ -35,9 +37,9 @@ export default function UserProfileCard({
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal-card profile-card" onClick={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Закрыть"><XIcon /></button>
-        <div className="profile-banner" style={{ background: user.bannerColor ?? BRAND_GRADIENT }}>
+        <div className={`profile-banner ${user.bannerPath ? "has-image" : ""}`} style={user.bannerPath ? { backgroundImage: `url(${user.bannerPath})` } : { background: user.bannerColor ?? BRAND_GRADIENT }}>
           <span className="profile-avatar-edit" aria-hidden="true">
-            <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self profile-avatar-large">{user.isOnline && <i />}</Avatar>
+            <Avatar name={user.displayName} avatarPath={user.avatarPath} avatarFrame={user.avatarFrame} className="avatar self profile-avatar-large">{user.isOnline && <i />}</Avatar>
           </span>
         </div>
         <div className="profile-identity">

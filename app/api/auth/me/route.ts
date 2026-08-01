@@ -19,6 +19,7 @@ export async function PATCH(request: Request) {
     newPassword?: string;
     bio?: string;
     bannerColor?: string | null;
+    avatarFrame?: string | null;
   };
 
   const db = getDb();
@@ -73,6 +74,15 @@ export async function PATCH(request: Request) {
     updates.bannerColor = bannerColor || null;
   }
 
+  if (payload.avatarFrame !== undefined) {
+    if (!sessionUser.isUltra) return Response.json({ error: "Рамки доступны только с Talker Ultra" }, { status: 403 });
+    const avatarFrame = payload.avatarFrame?.trim() ?? "";
+    if (avatarFrame && !["neon", "comet", "emerald"].includes(avatarFrame)) {
+      return Response.json({ error: "Неизвестная рамка аватара" }, { status: 400 });
+    }
+    updates.avatarFrame = avatarFrame || null;
+  }
+
   if (Object.keys(updates).length === 0) {
     return Response.json({ error: "Нечего сохранять" }, { status: 400 });
   }
@@ -85,6 +95,8 @@ export async function PATCH(request: Request) {
       avatarPath: users.avatarPath,
       bio: users.bio,
       bannerColor: users.bannerColor,
+      bannerPath: users.bannerPath,
+      avatarFrame: users.avatarFrame,
       isUltra: users.isUltra,
       createdAt: users.createdAt,
     });

@@ -3,6 +3,7 @@ import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { users, voicePeers, voiceSignals } from "../../../db/schema";
 import { areFriends } from "../../social";
+import { canAccessServerChannel } from "../../serverAccess";
 
 // Chrome (and Electron on the same engine, unless backgroundThrottling is
 // disabled) clamps setInterval to ~once/minute once a page has been hidden
@@ -13,7 +14,7 @@ const SIGNAL_TTL_MS = 120_000;
 const SIGNAL_KINDS = new Set(["offer", "answer", "ice"]);
 
 async function canJoinVoiceRoom(userId: number, serverId: string, channel: string) {
-  if (serverId !== "dm") return true;
+  if (serverId !== "dm") return canAccessServerChannel(userId, serverId, channel, "voice");
   const match = /^dm:(\d+):(\d+)$/.exec(channel);
   if (!match) return false;
   const firstUserId = Number(match[1]);
@@ -55,6 +56,7 @@ export async function GET(request: Request) {
       displayName: users.displayName,
       username: users.username,
       avatarPath: users.avatarPath,
+      avatarFrame: users.avatarFrame,
     })
     .from(voicePeers)
     .innerJoin(users, eq(voicePeers.userId, users.id))

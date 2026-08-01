@@ -20,6 +20,6 @@ export async function POST(request: Request) {
 
   const session = await createSession(record.id, request);
   return Response.json({
-    user: { id: record.id, username: record.username, displayName: record.displayName, avatarPath: record.avatarPath, bio: record.bio, bannerColor: record.bannerColor, isUltra: record.isUltra, createdAt: record.createdAt },
+    user: { id: record.id, username: record.username, displayName: record.displayName, avatarPath: record.avatarPath, bio: record.bio, bannerColor: record.bannerColor, bannerPath: record.bannerPath, avatarFrame: record.avatarFrame, isUltra: record.isUltra, createdAt: record.createdAt },
   }, { headers: { "set-cookie": session.cookie } });
 }

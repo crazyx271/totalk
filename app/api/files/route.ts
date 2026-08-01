@@ -4,6 +4,7 @@ import { getSessionUser } from "../../auth";
 import { getDb, messageFilesDir } from "../../../db";
 import { directMessages, messages } from "../../../db/schema";
 import { areFriends } from "../../social";
+import { canAccessServerChannel } from "../../serverAccess";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       const serverId = String(form.get("serverId") ?? "").trim().slice(0, 40);
       const channel = String(form.get("channel") ?? "").trim().slice(0, 80);
       if (!serverId || !channel) return Response.json({ error: "Канал не указан" }, { status: 400 });
+      if (!await canAccessServerChannel(user.id, serverId, channel, "text")) return Response.json({ error: "Канал недоступен" }, { status: 403 });
       const [row] = await getDb().insert(messages).values({ ...common, userId: user.id, serverId, channel }).returning({ id: messages.id });
       return Response.json({ id: row.id, scope: "channel" }, { status: 201 });
     }

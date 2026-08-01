@@ -21,13 +21,17 @@ export default function ProfileModal({
   const [username, setUsername] = useState(user.username);
   const [bio, setBio] = useState(user.bio ?? "");
   const [bannerColor, setBannerColor] = useState(user.bannerColor);
+  const [bannerPath, setBannerPath] = useState(user.bannerPath);
+  const [avatarFrame, setAvatarFrame] = useState(user.avatarFrame);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [avatarPath, setAvatarPath] = useState(user.avatarPath);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   async function uploadAvatar(file: File) {
     setError("");
@@ -62,6 +66,39 @@ export default function ProfileModal({
     }
   }
 
+  async function uploadBanner(file: File) {
+    setError("");
+    setUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append("banner", file);
+      const response = await fetch("/api/profile/banner", { method: "POST", body: formData });
+      const data = await response.json() as { bannerPath?: string; error?: string };
+      if (!response.ok || !data.bannerPath) throw new Error(data.error ?? "Не удалось загрузить баннер");
+      setBannerPath(data.bannerPath);
+      onSaved({ ...user, avatarPath, bannerPath: data.bannerPath, avatarFrame });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить баннер");
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
+  async function removeBanner() {
+    setError("");
+    setUploadingBanner(true);
+    try {
+      const response = await fetch("/api/profile/banner", { method: "DELETE" });
+      if (!response.ok) throw new Error("Не удалось удалить баннер");
+      setBannerPath(null);
+      onSaved({ ...user, avatarPath, bannerPath: null, avatarFrame });
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Не удалось удалить баннер");
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -72,6 +109,7 @@ export default function ProfileModal({
       if (username.trim() !== user.username) payload.username = username.trim();
       if (bio.trim() !== (user.bio ?? "")) payload.bio = bio.trim();
       if (bannerColor !== user.bannerColor) payload.bannerColor = bannerColor;
+      if (avatarFrame !== user.avatarFrame) payload.avatarFrame = avatarFrame;
       if (newPassword) {
         payload.newPassword = newPassword;
         payload.currentPassword = currentPassword;
@@ -87,7 +125,7 @@ export default function ProfileModal({
       });
       const data = await response.json() as { user?: ToTalkUser; error?: string };
       if (!response.ok || !data.user) throw new Error(data.error ?? "Не удалось сохранить");
-      onSaved({ ...data.user, avatarPath });
+      onSaved({ ...data.user, avatarPath, bannerPath });
       onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
@@ -100,7 +138,8 @@ export default function ProfileModal({
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal-card profile-card" onClick={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Закрыть"><XIcon /></button>
-        <div className="profile-banner" style={{ background: bannerColor ?? BRAND_GRADIENT }}>
+        <div className={`profile-banner ${bannerPath ? "has-image" : ""}`} style={bannerPath ? { backgroundImage: `url(${bannerPath})` } : { background: bannerColor ?? BRAND_GRADIENT }}>
+          {user.isUltra && <button type="button" className="profile-banner-edit" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner} aria-label="Загрузить баннер">{uploadingBanner ? "…" : <EditIcon />}<span>Изменить баннер</span></button>}
           <button
             type="button"
             className="profile-avatar-edit"
@@ -108,10 +147,21 @@ export default function ProfileModal({
             disabled={uploadingAvatar}
             aria-label="Загрузить фото профиля"
           >
-            <Avatar name={displayName} avatarPath={avatarPath} className="avatar self profile-avatar-large" />
+            <Avatar name={displayName} avatarPath={avatarPath} avatarFrame={avatarFrame} className="avatar self profile-avatar-large" />
             <span className="profile-avatar-edit-label">{uploadingAvatar ? "…" : <EditIcon />}</span>
           </button>
         </div>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void uploadBanner(file);
+            event.target.value = "";
+          }}
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -156,6 +206,17 @@ export default function ProfileModal({
               ))}
             </div>
           </label>
+          {user.isUltra && <label>Рамка аватара <span className="field-hint">Тестовые эффекты Talker Ultra</span>
+            <div className="avatar-frame-options">
+              {[null, "neon", "comet", "emerald"].map((frame) => (
+                <button type="button" key={frame ?? "none"} className={`avatar-frame-option ${avatarFrame === frame ? "selected" : ""}`} onClick={() => setAvatarFrame(frame)} aria-label={frame ? `Рамка ${frame}` : "Без рамки"}>
+                  <Avatar name={displayName} avatarPath={avatarPath} avatarFrame={frame} className="avatar frame-preview" />
+                  <span>{frame === null ? "Нет" : frame === "neon" ? "Неон" : frame === "comet" ? "Комета" : "Изумруд"}</span>
+                </button>
+              ))}
+            </div>
+          </label>}
+          {user.isUltra && bannerPath && <button type="button" className="profile-banner-remove" onClick={() => void removeBanner()} disabled={uploadingBanner}>Удалить изображение баннера</button>}
           <div className="modal-divider">Смена пароля (необязательно)</div>
           <label>Текущий пароль<input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" placeholder="Оставьте пустым, если не меняете пароль" /></label>
           <label>Новый пароль<input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={8} maxLength={128} autoComplete="new-password" /></label>

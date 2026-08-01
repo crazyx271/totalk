@@ -102,6 +102,8 @@ export async function getSessionUser(request: Request) {
       avatarPath: users.avatarPath,
       bio: users.bio,
       bannerColor: users.bannerColor,
+      bannerPath: users.bannerPath,
+      avatarFrame: users.avatarFrame,
       isUltra: users.isUltra,
       createdAt: users.createdAt,
     })

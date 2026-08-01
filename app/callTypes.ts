@@ -5,6 +5,8 @@ export type Friend = {
   avatarPath: string | null;
   bio: string | null;
   bannerColor: string | null;
+  bannerPath: string | null;
+  avatarFrame: string | null;
   createdAt: string;
   isOnline: boolean;
   isUltra: boolean;
@@ -19,4 +21,11 @@ export type DirectCall = {
   status: "ringing" | "accepted";
   incoming: boolean;
   person: Friend;
+};
+
+export type CommunityServer = {
+  id: string;
+  name: string;
+  ownerId: number;
+  channels: Array<{ id?: number; name: string; kind: string }>;
 };

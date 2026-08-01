@@ -14,6 +14,10 @@ export function avatarsDir() {
   return join(dirname(databasePath()), "avatars");
 }
 
+export function bannersDir() {
+  return join(dirname(databasePath()), "banners");
+}
+
 export function downloadsDir() {
   return join(dirname(databasePath()), "downloads");
 }

@@ -3,6 +3,7 @@ import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { messages, users } from "../../../db/schema";
 import { isSticker } from "../../stickers";
+import { canAccessServerChannel } from "../../serverAccess";
 
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
   if (!serverId || !channel) {
     return Response.json({ error: "Не указан канал" }, { status: 400 });
   }
+  if (!await canAccessServerChannel(user.id, serverId, channel, "text")) return Response.json({ error: "Канал недоступен" }, { status: 403 });
 
   const db = getDb();
   const rows = await db
@@ -25,6 +27,7 @@ export async function GET(request: Request) {
       author: users.displayName,
       username: users.username,
       avatarPath: users.avatarPath,
+      avatarFrame: users.avatarFrame,
       text: messages.content,
       kind: messages.kind,
       fileName: messages.fileName,
@@ -59,6 +62,7 @@ export async function POST(request: Request) {
   if (!serverId || !channel || !text) {
     return Response.json({ error: "Сообщение пустое" }, { status: 400 });
   }
+  if (!await canAccessServerChannel(user.id, serverId, channel, "text")) return Response.json({ error: "Канал недоступен" }, { status: 403 });
   if (kind === "sticker" ? !isSticker(text) : text.length > MAX_MESSAGE_LENGTH) {
     return Response.json({ error: kind === "sticker" ? "Неизвестный стикер" : "Сообщение слишком длинное" }, { status: 400 });
   }
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
     .returning({ id: messages.id, text: messages.content, kind: messages.kind, createdAt: messages.createdAt });
 
   return Response.json({
-    message: { ...message, userId: user.id, author: user.displayName, username: user.username, avatarPath: user.avatarPath },
+    message: { ...message, userId: user.id, author: user.displayName, username: user.username, avatarPath: user.avatarPath, avatarFrame: user.avatarFrame },
   }, { status: 201 });
 }
 

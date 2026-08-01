@@ -26,7 +26,8 @@ test("web app sources describe the ToTalk v1 product", async () => {
   assert.match(layout, /title:\s*"ToTalk — общение без границ"/);
   assert.match(page, /ToTalk запускается/);
   assert.match(page, /С возвращением/);
-  assert.match(app, /voiceChannels:\s*\["Голосовой"\]/);
+  assert.match(app, /fetch\("\/api\/servers"/);
+  assert.match(app, /channels\.filter\(\(item\) => item\.kind === "voice"\)/);
   assert.doesNotMatch(app, /Клуб|Игровая|Музыка|Лобби|Комната отдыха/);
   assert.match(iceRoute, /TURN_SECRET/);
   assert.match(iceRoute, /Требуется вход/);
@@ -62,11 +63,15 @@ test("self-hosted build and deploy docs are wired up", async () => {
 });
 
 test("video calling is wired up in the voice call stack", async () => {
-  const [voiceHook, voiceRoute] = await Promise.all([
+  const [voiceHook, voiceRoute, desktopMain] = await Promise.all([
     readFile(new URL("../app/useVoiceChat.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/voice/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../desktop/src/main.mjs", import.meta.url), "utf8"),
   ]);
 
   assert.match(voiceHook, /toggleCamera/);
+  assert.match(voiceHook, /getDisplayMedia/);
   assert.match(voiceRoute, /32_000/);
+  assert.match(desktopMain, /display-capture/);
+  assert.match(desktopMain, /toggle-fullscreen/);
 });

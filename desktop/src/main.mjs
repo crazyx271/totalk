@@ -127,6 +127,8 @@ function createWindow() {
 
   window.on("maximize", () => window.webContents.send("window:maximized-changed", true));
   window.on("unmaximize", () => window.webContents.send("window:maximized-changed", false));
+  window.on("enter-full-screen", () => window.webContents.send("window:fullscreen-changed", true));
+  window.on("leave-full-screen", () => window.webContents.send("window:fullscreen-changed", false));
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (new URL(url).origin === TOTALK_ORIGIN) {
@@ -177,14 +179,27 @@ function createTray() {
   tray.on("click", showMainWindow);
 }
 
-ipcMain.on("window:minimize", () => mainWindow?.minimize());
-ipcMain.on("window:toggle-maximize", () => {
-  if (!mainWindow) return;
-  if (mainWindow.isMaximized()) mainWindow.unmaximize();
-  else mainWindow.maximize();
+function senderWindow(event) {
+  return BrowserWindow.fromWebContents(event.sender) ?? mainWindow;
+}
+
+ipcMain.handle("window:minimize", (event) => { senderWindow(event)?.minimize(); return true; });
+ipcMain.handle("window:toggle-maximize", (event) => {
+  const window = senderWindow(event);
+  if (!window) return false;
+  if (window.isMaximized()) window.unmaximize();
+  else window.maximize();
+  return window.isMaximized();
 });
-ipcMain.on("window:close", () => mainWindow?.close());
-ipcMain.handle("window:is-maximized", () => mainWindow?.isMaximized() ?? false);
+ipcMain.handle("window:close", (event) => { senderWindow(event)?.close(); return true; });
+ipcMain.handle("window:is-maximized", (event) => senderWindow(event)?.isMaximized() ?? false);
+ipcMain.handle("window:toggle-fullscreen", (event) => {
+  const window = senderWindow(event);
+  if (!window) return false;
+  window.setFullScreen(!window.isFullScreen());
+  return window.isFullScreen();
+});
+ipcMain.handle("window:is-fullscreen", (event) => senderWindow(event)?.isFullScreen() ?? false);
 ipcMain.handle("notification:show", (_event, payload = {}) => {
   if (!Notification.isSupported()) return false;
   const title = typeof payload.title === "string" ? payload.title.slice(0, 120) : "ToTalk";
@@ -196,17 +211,19 @@ ipcMain.handle("notification:show", (_event, payload = {}) => {
 });
 
 app.whenReady().then(() => {
-  session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    const allowed = new Set(["media", "fullscreen", "notifications"]);
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+    const allowed = new Set(["media", "display-capture", "fullscreen", "notifications"]);
     try {
-      return allowed.has(permission) && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
+      const origin = requestingOrigin ? new URL(requestingOrigin).origin : new URL(webContents.getURL()).origin;
+      return allowed.has(permission) && origin === TOTALK_ORIGIN;
     } catch {
       return false;
     }
   });
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const sameOrigin = webContents.getURL().startsWith(TOTALK_ORIGIN);
-    callback(["media", "fullscreen", "notifications"].includes(permission) && sameOrigin);
+    let sameOrigin = false;
+    try { sameOrigin = new URL(webContents.getURL()).origin === TOTALK_ORIGIN; } catch { sameOrigin = false; }
+    callback(["media", "display-capture", "fullscreen", "notifications"].includes(permission) && sameOrigin);
   });
   session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
