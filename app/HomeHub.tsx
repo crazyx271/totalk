@@ -10,7 +10,7 @@ import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
-import { CheckIcon, ChevronLeftIcon, LogOutIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { CheckIcon, ChevronLeftIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { PhoneOffIcon } from "./CallIcons";
 
 type Friend = {
@@ -67,6 +67,7 @@ export default function HomeHub({
   onUpdateUser: (user: ToTalkUser) => void;
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [viewedProfile, setViewedProfile] = useState<Friend | null>(null);
   const [section, setSection] = useState<"friends" | "pending" | "add">("friends");
@@ -283,7 +284,7 @@ export default function HomeHub({
         <button className="brand-mark" onClick={onOpenServer} aria-label="Открыть ToTalk">T</button>
       </nav>
 
-      <aside className="home-sidebar">
+      <aside className={`home-sidebar ${mobileNavOpen ? "mobile-open" : ""}`}>
         <form className="home-search" onSubmit={(event) => { event.preventDefault(); void searchFriends(search); }}>
           <SearchIcon />
           <input
@@ -297,15 +298,15 @@ export default function HomeHub({
             aria-label="Найти диалог по имени или логину"
           />
         </form>
-        <button className={`home-nav ${!selectedFriend ? "active" : ""}`} onClick={() => setSelectedFriend(null)}><UsersIcon /><span>Друзья</span></button>
-        <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); }} aria-label="Добавить друга"><PlusIcon /></button></div>
+        <button className={`home-nav ${!selectedFriend ? "active" : ""}`} onClick={() => { setSelectedFriend(null); setMobileNavOpen(false); }}><UsersIcon /><span>Друзья</span></button>
+        <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); setMobileNavOpen(false); }} aria-label="Добавить друга"><PlusIcon /></button></div>
         <div className="dm-list">
           {social.friends.map((friend) => (
             <div className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id}>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
                 <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small" />
               </button>
-              <button type="button" className="dm-person-name" onClick={() => setSelectedFriend(friend)}>
+              <button type="button" className="dm-person-name" onClick={() => { setSelectedFriend(friend); setMobileNavOpen(false); }}>
                 <b>{friend.displayName}</b><small>@{friend.username}</small>
               </button>
             </div>
@@ -320,6 +321,7 @@ export default function HomeHub({
           <button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button>
         </div>
       </aside>
+      {mobileNavOpen && <button className="scrim" onClick={() => setMobileNavOpen(false)} aria-label="Закрыть список" />}
       {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
       {viewedProfile && (
         <UserProfileCard
@@ -335,6 +337,7 @@ export default function HomeHub({
         {selectedFriend ? (
           <>
             <header className="dm-header">
+              <button type="button" className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Список диалогов"><MenuIcon /></button>
               <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад"><ChevronLeftIcon /></button>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(selectedFriend)} aria-label={`Профиль ${selectedFriend.displayName}`}>
                 <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
@@ -367,7 +370,9 @@ export default function HomeHub({
           </>
         ) : (
           <>
-            <header className="friends-header"><UsersIcon /><b>Друзья</b><span />
+            <header className="friends-header">
+              <button type="button" className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Список диалогов"><MenuIcon /></button>
+              <UsersIcon /><b>Друзья</b><span />
               <button className={section === "friends" ? "active" : ""} onClick={() => setSection("friends")}>Все</button>
               <button className={section === "pending" ? "active" : ""} onClick={() => setSection("pending")}>Заявки {social.incoming.length > 0 && <em>{social.incoming.length}</em>}</button>
               <button className="add-friend" onClick={() => setSection("add")}>Добавить друга</button>
