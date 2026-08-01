@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TOTALK_URL = process.env.TOTALK_URL?.trim() || "https://totalk.example.com/";
+const TOTALK_URL = process.env.TOTALK_URL?.trim() || "https://totalker.ru/";
 const TOTALK_ORIGIN = new URL(TOTALK_URL).origin;
 
 app.setName("ToTalk");
