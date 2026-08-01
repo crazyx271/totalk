@@ -7,6 +7,8 @@ export type Friend = {
   bannerColor: string | null;
   bannerPath: string | null;
   avatarFrame: string | null;
+  avatarPosition: string | null;
+  bannerPosition: string | null;
   createdAt: string;
   isOnline: boolean;
   isUltra: boolean;

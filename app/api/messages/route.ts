@@ -3,6 +3,7 @@ import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { messages, users } from "../../../db/schema";
 import { isSticker } from "../../stickers";
+import { isGiphyUrl } from "../../giphy";
 import { canAccessServerChannel } from "../../serverAccess";
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -58,13 +59,19 @@ export async function POST(request: Request) {
   const serverId = payload.serverId?.trim().slice(0, 40) ?? "";
   const channel = payload.channel?.trim().slice(0, 80) ?? "";
   const text = payload.text?.trim() ?? "";
-  const kind = payload.kind === "sticker" ? "sticker" : "text";
+  const kind = payload.kind === "sticker" ? "sticker" : payload.kind === "gif" ? "gif" : "text";
   if (!serverId || !channel || !text) {
     return Response.json({ error: "Сообщение пустое" }, { status: 400 });
   }
   if (!await canAccessServerChannel(user.id, serverId, channel, "text")) return Response.json({ error: "Канал недоступен" }, { status: 403 });
-  if (kind === "sticker" ? !isSticker(text) : text.length > MAX_MESSAGE_LENGTH) {
-    return Response.json({ error: kind === "sticker" ? "Неизвестный стикер" : "Сообщение слишком длинное" }, { status: 400 });
+  if (kind === "sticker" && !isSticker(text)) {
+    return Response.json({ error: "Неизвестный стикер" }, { status: 400 });
+  }
+  if (kind === "gif" && !isGiphyUrl(text)) {
+    return Response.json({ error: "Некорректная ссылка на GIF" }, { status: 400 });
+  }
+  if (kind === "text" && text.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: "Сообщение слишком длинное" }, { status: 400 });
   }
 
   const [message] = await getDb()

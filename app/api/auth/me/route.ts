@@ -20,6 +20,8 @@ export async function PATCH(request: Request) {
     bio?: string;
     bannerColor?: string | null;
     avatarFrame?: string | null;
+    avatarPosition?: string | null;
+    bannerPosition?: string | null;
   };
 
   const db = getDb();
@@ -83,6 +85,24 @@ export async function PATCH(request: Request) {
     updates.avatarFrame = avatarFrame || null;
   }
 
+  const POSITION_PATTERN = /^\d{1,3}% \d{1,3}%$/;
+
+  if (payload.avatarPosition !== undefined) {
+    const avatarPosition = payload.avatarPosition?.trim() ?? "";
+    if (avatarPosition && !POSITION_PATTERN.test(avatarPosition)) {
+      return Response.json({ error: "Некорректное положение аватара" }, { status: 400 });
+    }
+    updates.avatarPosition = avatarPosition || null;
+  }
+
+  if (payload.bannerPosition !== undefined) {
+    const bannerPosition = payload.bannerPosition?.trim() ?? "";
+    if (bannerPosition && !POSITION_PATTERN.test(bannerPosition)) {
+      return Response.json({ error: "Некорректное положение баннера" }, { status: 400 });
+    }
+    updates.bannerPosition = bannerPosition || null;
+  }
+
   if (Object.keys(updates).length === 0) {
     return Response.json({ error: "Нечего сохранять" }, { status: 400 });
   }
@@ -97,6 +117,8 @@ export async function PATCH(request: Request) {
       bannerColor: users.bannerColor,
       bannerPath: users.bannerPath,
       avatarFrame: users.avatarFrame,
+      avatarPosition: users.avatarPosition,
+      bannerPosition: users.bannerPosition,
       isUltra: users.isUltra,
       createdAt: users.createdAt,
     });

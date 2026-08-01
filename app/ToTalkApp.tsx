@@ -447,6 +447,37 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     }
   }
 
+  async function sendGif(url: string) {
+    setShowStickers(false);
+    const temporaryId = temporaryMessageIdRef.current--;
+    setMessages((current) => [...current, {
+      id: temporaryId,
+      userId: user.id,
+      author: user.displayName,
+      username: user.username,
+      avatar: user.displayName.charAt(0).toUpperCase() || "В",
+      avatarPath: user.avatarPath,
+      avatarFrame: user.avatarFrame,
+      time: date.format(new Date()),
+      createdAtMs: Date.now(),
+      text: url,
+      kind: "gif",
+      mine: true,
+    }]);
+    try {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ serverId: workspace.id, channel, text: url, kind: "gif" }),
+      });
+      if (!response.ok) throw new Error("send failed");
+      await loadMessages();
+    } catch {
+      setMessages((current) => current.filter((message) => message.id !== temporaryId));
+      setConnection("error");
+    }
+  }
+
   async function sendChannelFile(file: File) {
     if (sending) return;
     setSending(true);
@@ -630,6 +661,8 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
                     message.fileMime || message.stickerId ? (
                       <img className="sticker-bubble-image" src={message.fileMime ? `/api/files/channel/${message.id}` : `/api/stickers/image/${message.stickerId}`} alt="Стикер" />
                     ) : <span className="sticker-bubble">{message.text}</span>
+                  ) : message.kind === "gif" ? (
+                    <img className="gif-bubble-image" src={message.text} alt="GIF" />
                   ) : message.kind === "file" ? (
                     <a className="file-card" href={`/api/files/channel/${message.id}`} download><span><PaperclipIcon /></span><div><b>{message.fileName ?? message.text}</b><small>{message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon /></a>
                   ) : <p>{message.text}</p>}
@@ -644,7 +677,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Написать #${channel}`} aria-label="Сообщение" />
             <div className="sticker-anchor">
               <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
-              {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onClose={() => setShowStickers(false)} />}
+              {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onPickGif={(url) => void sendGif(url)} onClose={() => setShowStickers(false)} />}
             </div>
             <button className="send" aria-label="Отправить" disabled={sending}><SendIcon /></button>
           </form>

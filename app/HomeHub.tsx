@@ -261,6 +261,17 @@ export default function HomeHub({
     await loadMessages();
   }
 
+  async function sendGif(url: string) {
+    if (!selectedFriend) return;
+    setShowStickers(false);
+    await fetch("/api/direct-messages", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ friendId: selectedFriend.id, text: url, kind: "gif" }),
+    });
+    await loadMessages();
+  }
+
   async function sendFile(file: File) {
     if (!selectedFriend || uploadingFile) return;
     setUploadingFile(true);
@@ -391,6 +402,8 @@ export default function HomeHub({
                       item.message.fileMime ? (
                         <img className="sticker-bubble-image" src={`/api/files/dm/${item.message.id}`} alt="Стикер" />
                       ) : <span className="sticker-bubble">{item.message.text}</span>
+                    ) : item.message.kind === "gif" ? (
+                      <img className="gif-bubble-image" src={item.message.text} alt="GIF" />
                     ) : item.message.kind === "file" ? (
                       <a className="file-card" href={`/api/files/dm/${item.message.id}`} download>
                         <span><PaperclipIcon /></span><div><b>{item.message.fileName ?? item.message.text}</b><small>{item.message.fileSize ? `${(item.message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon />
@@ -414,7 +427,7 @@ export default function HomeHub({
               <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Сообщение для @${selectedFriend.username}`} />
               <div className="sticker-anchor">
                 <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
-                {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onClose={() => setShowStickers(false)} />}
+                {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onPickGif={(url) => void sendGif(url)} onClose={() => setShowStickers(false)} />}
               </div>
               <button disabled={!draft.trim()} aria-label="Отправить"><SendIcon /></button>
             </form>

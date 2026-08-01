@@ -4,6 +4,7 @@ import { getDb } from "../../../db";
 import { directMessages, users } from "../../../db/schema";
 import { areFriends } from "../../social";
 import { isSticker } from "../../stickers";
+import { isGiphyUrl } from "../../giphy";
 
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -48,12 +49,18 @@ export async function POST(request: Request) {
   const payload = await request.json() as { friendId?: number; text?: string; kind?: string };
   const friendId = Number(payload.friendId);
   const text = payload.text?.trim() ?? "";
-  const kind = payload.kind === "sticker" ? "sticker" : "text";
+  const kind = payload.kind === "sticker" ? "sticker" : payload.kind === "gif" ? "gif" : "text";
   if (!Number.isInteger(friendId) || !text) {
     return Response.json({ error: "Некорректное сообщение" }, { status: 400 });
   }
-  if (kind === "sticker" ? !isSticker(text) : text.length > MAX_MESSAGE_LENGTH) {
-    return Response.json({ error: kind === "sticker" ? "Неизвестный стикер" : "Сообщение слишком длинное" }, { status: 400 });
+  if (kind === "sticker" && !isSticker(text)) {
+    return Response.json({ error: "Неизвестный стикер" }, { status: 400 });
+  }
+  if (kind === "gif" && !isGiphyUrl(text)) {
+    return Response.json({ error: "Некорректная ссылка на GIF" }, { status: 400 });
+  }
+  if (kind === "text" && text.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: "Сообщение слишком длинное" }, { status: 400 });
   }
   if (!await areFriends(currentUser.id, friendId)) {
     return Response.json({ error: "Добавьте пользователя в друзья" }, { status: 403 });

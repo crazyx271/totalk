@@ -2,27 +2,34 @@
 
 import { useEffect, useRef, useState } from "react";
 import { STICKERS, type Sticker, type StickerPack } from "./stickers";
-import { PlusIcon, XIcon } from "./Icons";
+import { PlusIcon, SearchIcon, XIcon } from "./Icons";
+
+type GiphyGif = { id: string; title: string; previewUrl: string; url: string };
 
 export default function StickerPicker({
   currentUserId,
   onPick,
   onPickImage,
+  onPickGif,
   onClose,
 }: {
   currentUserId: number;
   onPick: (sticker: Sticker) => void;
   onPickImage: (stickerId: number) => void;
+  onPickGif: (url: string) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const [packs, setPacks] = useState<StickerPack[]>([]);
-  const [activeTab, setActiveTab] = useState<"emoji" | number>("emoji");
+  const [activeTab, setActiveTab] = useState<"emoji" | "gif" | number>("emoji");
   const [creating, setCreating] = useState(false);
   const [newPackName, setNewPackName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [gifQuery, setGifQuery] = useState("");
+  const [gifResults, setGifResults] = useState<GiphyGif[]>([]);
+  const [gifLoading, setGifLoading] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -38,6 +45,25 @@ export default function StickerPicker({
     })();
     return () => { disposed = true; };
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "gif") return;
+    let disposed = false;
+    const timer = window.setTimeout(async () => {
+      if (disposed) return;
+      setGifLoading(true);
+      try {
+        const response = await fetch(`/api/giphy/search?q=${encodeURIComponent(gifQuery)}`, { cache: "no-store" });
+        const data = await response.json() as { gifs?: GiphyGif[]; error?: string };
+        if (!disposed) setGifResults(response.ok ? (data.gifs ?? []) : []);
+      } catch {
+        if (!disposed) setGifResults([]);
+      } finally {
+        if (!disposed) setGifLoading(false);
+      }
+    }, gifQuery ? 350 : 0);
+    return () => { disposed = true; window.clearTimeout(timer); };
+  }, [activeTab, gifQuery]);
 
   useEffect(() => {
     function handleOutside(event: MouseEvent) {
@@ -103,9 +129,10 @@ export default function StickerPicker({
   const activePack = typeof activeTab === "number" ? packs.find((pack) => pack.id === activeTab) : undefined;
 
   return (
-    <div className="sticker-picker" ref={ref} role="menu" aria-label="Выбор стикера">
+    <div className="sticker-picker" ref={ref} role="menu" aria-label="Выбор стикера или GIF">
       <div className="sticker-tabs">
         <button type="button" className={activeTab === "emoji" ? "active" : ""} onClick={() => setActiveTab("emoji")}>Эмодзи</button>
+        <button type="button" className={activeTab === "gif" ? "active" : ""} onClick={() => setActiveTab("gif")}>GIF</button>
         {packs.map((pack) => (
           <button type="button" key={pack.id} className={activeTab === pack.id ? "active" : ""} onClick={() => setActiveTab(pack.id)} title={pack.name}>
             {pack.stickers[0] ? <img src={`/api/stickers/image/${pack.stickers[0].id}`} alt="" /> : pack.name.charAt(0).toUpperCase()}
@@ -137,6 +164,21 @@ export default function StickerPicker({
             </button>
           ))}
         </div>
+      ) : activeTab === "gif" ? (
+        <>
+          <div className="gif-search">
+            <SearchIcon />
+            <input value={gifQuery} onChange={(event) => setGifQuery(event.target.value)} placeholder="Поиск GIF в GIPHY" />
+          </div>
+          <div className="gif-grid">
+            {gifResults.map((gif) => (
+              <button type="button" key={gif.id} onClick={() => onPickGif(gif.url)} aria-label={gif.title || "Отправить GIF"}>
+                <img src={gif.previewUrl} alt={gif.title} loading="lazy" />
+              </button>
+            ))}
+            {!gifLoading && gifResults.length === 0 && <p className="sticker-empty">Ничего не найдено</p>}
+          </div>
+        </>
       ) : activePack ? (
         <>
           <div className="sticker-grid images">

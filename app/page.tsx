@@ -15,6 +15,8 @@ export type ToTalkUser = {
   bannerColor: string | null;
   bannerPath: string | null;
   avatarFrame: string | null;
+  avatarPosition: string | null;
+  bannerPosition: string | null;
   isUltra: boolean;
   createdAt: string;
 };

@@ -12,6 +12,8 @@ export const users = sqliteTable("users", {
   bannerColor: text("banner_color"),
   bannerPath: text("banner_path"),
   avatarFrame: text("avatar_frame"),
+  avatarPosition: text("avatar_position"),
+  bannerPosition: text("banner_position"),
   lastActiveAt: integer("last_active_at"),
   isUltra: integer("is_ultra", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

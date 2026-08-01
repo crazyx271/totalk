@@ -13,6 +13,8 @@ type RawUser = {
   bannerColor: string | null;
   bannerPath: string | null;
   avatarFrame: string | null;
+  avatarPosition: string | null;
+  bannerPosition: string | null;
   isUltra: boolean;
   createdAt: string;
   lastActiveAt: number | null;
@@ -29,6 +31,8 @@ const publicUserColumns = {
   bannerColor: users.bannerColor,
   bannerPath: users.bannerPath,
   avatarFrame: users.avatarFrame,
+  avatarPosition: users.avatarPosition,
+  bannerPosition: users.bannerPosition,
   isUltra: users.isUltra,
   createdAt: users.createdAt,
   lastActiveAt: users.lastActiveAt,

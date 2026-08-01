@@ -3,6 +3,8 @@
 import { FormEvent, useRef, useState } from "react";
 import type { ToTalkUser } from "./page";
 import Avatar from "./Avatar";
+import PositionPicker from "./PositionPicker";
+import GiphyPickerModal from "./GiphyPickerModal";
 import { CrownIcon, EditIcon, XIcon } from "./Icons";
 
 const BANNER_COLORS = ["#5865F2", "#3BA55D", "#ED4245", "#FAA61A", "#EB459E", "#00B0F4", "#747F8D"];
@@ -23,6 +25,8 @@ export default function ProfileModal({
   const [bannerColor, setBannerColor] = useState(user.bannerColor);
   const [bannerPath, setBannerPath] = useState(user.bannerPath);
   const [avatarFrame, setAvatarFrame] = useState(user.avatarFrame);
+  const [avatarPosition, setAvatarPosition] = useState(user.avatarPosition ?? "50% 50%");
+  const [bannerPosition, setBannerPosition] = useState(user.bannerPosition ?? "50% 50%");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [avatarPath, setAvatarPath] = useState(user.avatarPath);
@@ -30,6 +34,8 @@ export default function ProfileModal({
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [showAvatarGiphy, setShowAvatarGiphy] = useState(false);
+  const [showBannerGiphy, setShowBannerGiphy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -46,6 +52,27 @@ export default function ProfileModal({
       onSaved({ ...user, avatarPath: data.avatarPath });
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function applyAvatarGif(url: string) {
+    setShowAvatarGiphy(false);
+    setError("");
+    setUploadingAvatar(true);
+    try {
+      const response = await fetch("/api/profile/avatar/from-gif", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json() as { avatarPath?: string; error?: string };
+      if (!response.ok || !data.avatarPath) throw new Error(data.error ?? "Не удалось загрузить GIF");
+      setAvatarPath(data.avatarPath);
+      onSaved({ ...user, avatarPath: data.avatarPath });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить GIF");
     } finally {
       setUploadingAvatar(false);
     }
@@ -84,6 +111,27 @@ export default function ProfileModal({
     }
   }
 
+  async function applyBannerGif(url: string) {
+    setShowBannerGiphy(false);
+    setError("");
+    setUploadingBanner(true);
+    try {
+      const response = await fetch("/api/profile/banner/from-gif", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json() as { bannerPath?: string; error?: string };
+      if (!response.ok || !data.bannerPath) throw new Error(data.error ?? "Не удалось загрузить GIF");
+      setBannerPath(data.bannerPath);
+      onSaved({ ...user, avatarPath, bannerPath: data.bannerPath, avatarFrame });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить GIF");
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
   async function removeBanner() {
     setError("");
     setUploadingBanner(true);
@@ -110,6 +158,8 @@ export default function ProfileModal({
       if (bio.trim() !== (user.bio ?? "")) payload.bio = bio.trim();
       if (bannerColor !== user.bannerColor) payload.bannerColor = bannerColor;
       if (avatarFrame !== user.avatarFrame) payload.avatarFrame = avatarFrame;
+      if (avatarPosition !== (user.avatarPosition ?? "50% 50%")) payload.avatarPosition = avatarPosition;
+      if (bannerPosition !== (user.bannerPosition ?? "50% 50%")) payload.bannerPosition = bannerPosition;
       if (newPassword) {
         payload.newPassword = newPassword;
         payload.currentPassword = currentPassword;
@@ -138,8 +188,13 @@ export default function ProfileModal({
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal-card profile-card" onClick={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Закрыть"><XIcon /></button>
-        <div className={`profile-banner ${bannerPath ? "has-image" : ""}`} style={bannerPath ? { backgroundImage: `url(${bannerPath})` } : { background: bannerColor ?? BRAND_GRADIENT }}>
-          {user.isUltra && <button type="button" className="profile-banner-edit" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner} aria-label="Загрузить баннер">{uploadingBanner ? "…" : <EditIcon />}<span>Изменить баннер</span></button>}
+        <div className={`profile-banner ${bannerPath ? "has-image" : ""}`} style={bannerPath ? { backgroundImage: `url(${bannerPath})`, backgroundPosition: bannerPosition } : { background: bannerColor ?? BRAND_GRADIENT }}>
+          {user.isUltra && (
+            <div className="profile-banner-actions">
+              <button type="button" className="profile-banner-edit" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner} aria-label="Загрузить баннер">{uploadingBanner ? "…" : <EditIcon />}<span>Файл</span></button>
+              <button type="button" className="profile-banner-edit" onClick={() => setShowBannerGiphy(true)} disabled={uploadingBanner} aria-label="Выбрать GIF для баннера"><span>GIF из GIPHY</span></button>
+            </div>
+          )}
           <button
             type="button"
             className="profile-avatar-edit"
@@ -147,7 +202,7 @@ export default function ProfileModal({
             disabled={uploadingAvatar}
             aria-label="Загрузить фото профиля"
           >
-            <Avatar name={displayName} avatarPath={avatarPath} avatarFrame={avatarFrame} className="avatar self profile-avatar-large" />
+            <Avatar name={displayName} avatarPath={avatarPath} avatarFrame={avatarFrame} avatarPosition={avatarPosition} className="avatar self profile-avatar-large" />
             <span className="profile-avatar-edit-label">{uploadingAvatar ? "…" : <EditIcon />}</span>
           </button>
         </div>
@@ -179,7 +234,10 @@ export default function ProfileModal({
             <small>@{username || user.username}</small>
             {user.isUltra && <small className="ultra-hint">GIF-аватар доступен благодаря Talker Ultra</small>}
           </div>
-          {avatarPath && <button type="button" className="profile-avatar-remove" onClick={() => void removeAvatar()} disabled={uploadingAvatar}>Удалить фото</button>}
+          <div className="profile-identity-actions">
+            {user.isUltra && <button type="button" className="profile-avatar-remove" onClick={() => setShowAvatarGiphy(true)} disabled={uploadingAvatar}>GIF из GIPHY</button>}
+            {avatarPath && <button type="button" className="profile-avatar-remove" onClick={() => void removeAvatar()} disabled={uploadingAvatar}>Удалить фото</button>}
+          </div>
         </div>
         <form className="profile-form" onSubmit={save}>
           <label>Отображаемое имя<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} minLength={2} maxLength={32} required /></label>
@@ -206,6 +264,16 @@ export default function ProfileModal({
               ))}
             </div>
           </label>
+          {avatarPath && (
+            <label>Расположение фото
+              <PositionPicker src={avatarPath} shape="circle" value={avatarPosition} onChange={setAvatarPosition} />
+            </label>
+          )}
+          {bannerPath && (
+            <label>Расположение баннера
+              <PositionPicker src={bannerPath} shape="wide" value={bannerPosition} onChange={setBannerPosition} />
+            </label>
+          )}
           {user.isUltra && <label>Рамка аватара <span className="field-hint">Тестовые эффекты Talker Ultra</span>
             <div className="avatar-frame-options">
               {[null, "neon", "comet", "emerald"].map((frame) => (
@@ -224,6 +292,8 @@ export default function ProfileModal({
           <button className="auth-submit" disabled={saving}>{saving ? "Сохраняем…" : "Сохранить"}</button>
         </form>
       </div>
+      {showAvatarGiphy && <GiphyPickerModal title="GIF-аватар из GIPHY" onSelect={(url) => void applyAvatarGif(url)} onClose={() => setShowAvatarGiphy(false)} />}
+      {showBannerGiphy && <GiphyPickerModal title="GIF-баннер из GIPHY" onSelect={(url) => void applyBannerGif(url)} onClose={() => setShowBannerGiphy(false)} />}
     </div>
   );
 }
