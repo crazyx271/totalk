@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { STICKERS, type Sticker, type StickerPack } from "./stickers";
 import { PlusIcon, XIcon } from "./Icons";
 
@@ -47,8 +47,7 @@ export default function StickerPicker({
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [onClose]);
 
-  async function createPack(event: FormEvent) {
-    event.preventDefault();
+  async function createPack() {
     const name = newPackName.trim();
     if (!name || busy) return;
     setBusy(true);
@@ -116,10 +115,17 @@ export default function StickerPicker({
       </div>
 
       {creating && (
-        <form className="sticker-pack-create" onSubmit={createPack}>
-          <input value={newPackName} onChange={(event) => setNewPackName(event.target.value)} placeholder="Название набора" maxLength={32} autoFocus />
-          <button type="submit" disabled={busy || !newPackName.trim()}>Создать</button>
-        </form>
+        <div className="sticker-pack-create">
+          <input
+            value={newPackName}
+            onChange={(event) => setNewPackName(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createPack(); } }}
+            placeholder="Название набора"
+            maxLength={32}
+            autoFocus
+          />
+          <button type="button" onClick={() => void createPack()} disabled={busy || !newPackName.trim()}>Создать</button>
+        </div>
       )}
       {error && <div className="sticker-picker-error">{error}</div>}
 
