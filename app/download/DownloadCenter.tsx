@@ -98,7 +98,7 @@ export default function DownloadCenter() {
           {platform === "ios" && <small className="recommended-label">Для вашего устройства</small>}
         </article>
 
-        <article className={`download-card web-card ${platform === "web" ? "recommended" : ""}`}>
+        <article className={`download-card ${platform === "web" ? "recommended" : ""}`}>
           <div className="download-os-icon web">◎</div>
           <span className="download-status ready">Всегда доступно</span>
           <h2>Любой браузер</h2>

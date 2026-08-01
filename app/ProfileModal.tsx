@@ -189,7 +189,7 @@ export default function ProfileModal({
             <div className="banner-color-row">
               <button
                 type="button"
-                className={`banner-swatch brand ${bannerColor === null ? "selected" : ""}`}
+                className={`banner-swatch ${bannerColor === null ? "selected" : ""}`}
                 style={{ background: BRAND_GRADIENT }}
                 onClick={() => setBannerColor(null)}
                 aria-label="Стандартный цвет"
