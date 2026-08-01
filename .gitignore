@@ -43,6 +43,12 @@ next-env.d.ts
 /work/
 /desktop/node_modules/
 /desktop/release/
+/mobile/node_modules/
+/mobile/android/app/google-services.json
+/mobile/android/*.jks
+/mobile/android/*.keystore
+/mobile/ios/AuthKey_*.p8
+/mobile/ios/*.mobileprovision
 
 # local sqlite database and uploaded user content
 /data/*.sqlite*

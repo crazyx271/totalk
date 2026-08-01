@@ -110,3 +110,14 @@ export const directCalls = sqliteTable("direct_calls", {
   index("direct_calls_caller_idx").on(table.callerId, table.status, table.updatedAt),
   index("direct_calls_callee_idx").on(table.calleeId, table.status, table.updatedAt),
 ]);
+
+export const pushTokens = sqliteTable("push_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  platform: text("platform").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("push_tokens_token_unique").on(table.token),
+  index("push_tokens_user_idx").on(table.userId, table.platform),
+]);

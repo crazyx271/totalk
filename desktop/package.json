@@ -63,6 +63,8 @@
       "category": "public.app-category.social-networking",
       "icon": "assets/icon.png",
       "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
       "extendInfo": {
         "NSMicrophoneUsageDescription": "ToTalk использует микрофон для голосовых каналов.",
         "NSCameraUsageDescription": "ToTalk использует камеру для видеозвонков."

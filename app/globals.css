@@ -2,6 +2,8 @@
 
 :root { color-scheme: dark; --ink:#f7f7fb; --muted:#8e91a5; --panel:#17181d; --panel2:#1d1e24; --chat:#222329; --accent:#7c6cf2; --accent2:#9a8cff; }
 * { box-sizing:border-box; }
+.native-mobile body{padding-top:env(safe-area-inset-top);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left)}
+.native-mobile .app-shell{height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 html, body { margin:0; min-height:100%; overflow:hidden; background:#111216; color:var(--ink); font-family:var(--font-geist), Inter, system-ui, sans-serif; }
 button, input { font:inherit; }
 
