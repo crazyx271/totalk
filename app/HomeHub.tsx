@@ -368,11 +368,14 @@ export default function HomeHub({
             {callPanel}
             <div className="dm-messages" ref={messagesRef}>
               {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} avatarFrame={selectedFriend.avatarFrame} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
-              {timeline.map((item) => item.type === "message" ? (
-                <article className={`dm-message ${item.message.senderId === user.id ? "mine" : ""} ${item.message.kind === "sticker" ? "sticker-message" : ""}`} key={`message-${item.message.id}`}>
-                  <Avatar name={item.message.author} avatarPath={item.message.avatarPath} avatarFrame={item.message.avatarFrame} className="friend-avatar small" />
+              {timeline.map((item, index) => {
+                const previous = timeline[index - 1];
+                const grouped = item.type === "message" && Boolean(previous && previous.type === "message" && previous.message.senderId === item.message.senderId && item.epoch - previous.epoch < 5 * 60_000);
+                return item.type === "message" ? (
+                <article className={`dm-message ${item.message.senderId === user.id ? "mine" : ""} ${item.message.kind === "sticker" ? "sticker-message" : ""} ${grouped ? "grouped" : ""}`} key={`message-${item.message.id}`}>
+                  {grouped ? <time className="message-hover-time">{time.format(new Date(`${item.message.createdAt}Z`))}</time> : <Avatar name={item.message.author} avatarPath={item.message.avatarPath} avatarFrame={item.message.avatarFrame} className="friend-avatar small" />}
                   <div>
-                    <b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time>
+                    {!grouped && <><b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time></>}
                     {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : item.message.kind === "file" ? (
                       <a className="file-card" href={`/api/files/dm/${item.message.id}`} download>
                         <span><PaperclipIcon /></span><div><b>{item.message.fileName ?? item.message.text}</b><small>{item.message.fileSize ? `${(item.message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon />
@@ -386,7 +389,8 @@ export default function HomeHub({
                   <span>{describeCall(item.call)}</span>
                   <time>{time.format(new Date(item.call.createdAt))}</time>
                 </div>
-              ))}
+              );
+              })}
             </div>
             {notice && <div className="dm-notice">{notice}</div>}
             <form className="dm-composer" onSubmit={sendMessage}>

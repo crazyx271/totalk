@@ -27,6 +27,7 @@ type Message = {
   avatarPath: string | null;
   avatarFrame: string | null;
   time: string;
+  createdAtMs: number;
   text: string;
   kind: string;
   fileName?: string | null;
@@ -159,6 +160,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         avatarPath: message.avatarPath,
         avatarFrame: message.avatarFrame,
         time: new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }).format(new Date(`${message.createdAt}Z`)),
+        createdAtMs: new Date(`${message.createdAt}Z`).getTime(),
         text: message.text,
         kind: message.kind,
         fileName: message.fileName,
@@ -359,6 +361,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       avatarPath: user.avatarPath,
       avatarFrame: user.avatarFrame,
       time: date.format(new Date()),
+      createdAtMs: Date.now(),
       text,
       kind: "text",
       mine: true,
@@ -392,6 +395,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       avatarPath: user.avatarPath,
       avatarFrame: user.avatarFrame,
       time: date.format(new Date()),
+      createdAtMs: Date.now(),
       text: sticker,
       kind: "sticker",
       mine: true,
@@ -581,17 +585,21 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           <div className="message-scroll" ref={messagesRef}>
             <div className="channel-intro"><div>#</div><h1>Добро пожаловать в #{channel}!</h1><p>Это начало канала #{channel}.</p></div>
             <div className="day-divider"><span>Сегодня</span></div>
-            {messages.map((message) => (
-              <article className={`message ${message.mine ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
-                <Avatar name={message.author} avatarPath={message.avatarPath} avatarFrame={message.avatarFrame} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />
+            {messages.map((message, index) => {
+              const previous = messages[index - 1];
+              const grouped = Boolean(previous && previous.userId !== undefined && previous.userId === message.userId && message.createdAtMs - previous.createdAtMs < 5 * 60_000);
+              return (
+              <article className={`message ${message.mine ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""} ${grouped ? "grouped" : ""}`} key={message.id}>
+                {grouped ? <time className="message-hover-time">{message.time}</time> : <Avatar name={message.author} avatarPath={message.avatarPath} avatarFrame={message.avatarFrame} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />}
                 <div>
-                  <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>
+                  {!grouped && <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>}
                   {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : message.kind === "file" ? (
                     <a className="file-card" href={`/api/files/channel/${message.id}`} download><span><PaperclipIcon /></span><div><b>{message.fileName ?? message.text}</b><small>{message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon /></a>
                   ) : <p>{message.text}</p>}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
           <form className="composer" onSubmit={sendMessage}>
             <input ref={channelFileRef} className="visually-hidden" type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void sendChannelFile(file); }} />
