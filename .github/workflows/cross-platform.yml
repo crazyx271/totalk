@@ -23,7 +23,13 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
-      - name: Build macOS DMG
+      - name: Build unsigned macOS DMG
+        if: ${{ secrets.MAC_CSC_LINK == '' }}
+        run: npm run dist:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Build signed macOS DMG
+        if: ${{ secrets.MAC_CSC_LINK != '' }}
         run: npm run dist:mac
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -81,4 +87,3 @@ jobs:
           xcodebuild -project ios/App/App.xcodeproj -scheme App
           -configuration Debug -sdk iphonesimulator
           CODE_SIGNING_ALLOWED=NO build
-
