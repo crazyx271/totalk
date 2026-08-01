@@ -205,6 +205,11 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .profile-badge.early{background:#3a3320;border-color:#5a4d2c;color:#f0c76a}
 .profile-badge.online{background:#1f3a2b;border-color:#2c5a3f;color:#7ee3a3}
 .profile-badge .status-dot{width:7px;height:7px;border-radius:50%;background:#70747f;flex:none}
+.profile-badge.ultra{background:linear-gradient(135deg,#3a2f1f,#4a3620);border-color:#8a6a2f;color:#f2c869}
+.profile-name-row{display:flex;align-items:center;gap:6px}
+.ultra-mark{display:inline-flex;color:#f2c869;flex:none}
+.ultra-mark svg{width:16px;height:16px}
+.ultra-hint{display:block;color:#f2c869;margin-top:2px}
 .profile-badge.online .status-dot{background:#49c486}
 .profile-actions{display:flex;gap:10px;padding:20px 24px 24px}
 .profile-action{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:11px;border:0;cursor:pointer;font-weight:600;font-size:13px;background:#30323b;color:#fff}

@@ -3,7 +3,7 @@
 import { FormEvent, useRef, useState } from "react";
 import type { ToTalkUser } from "./page";
 import Avatar from "./Avatar";
-import { EditIcon, XIcon } from "./Icons";
+import { CrownIcon, EditIcon, XIcon } from "./Icons";
 
 const BANNER_COLORS = ["#5865F2", "#3BA55D", "#ED4245", "#FAA61A", "#EB459E", "#00B0F4", "#747F8D"];
 const BRAND_GRADIENT = "linear-gradient(135deg,#9688ff,#6958df)";
@@ -115,7 +115,7 @@ export default function ProfileModal({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept={user.isUltra ? "image/png,image/jpeg,image/webp,image/gif" : "image/png,image/jpeg,image/webp"}
           hidden
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -124,7 +124,11 @@ export default function ProfileModal({
           }}
         />
         <div className="profile-identity">
-          <div><b>{displayName || user.displayName}</b><small>@{username || user.username}</small></div>
+          <div>
+            <div className="profile-name-row"><b>{displayName || user.displayName}</b>{user.isUltra && <span className="ultra-mark" aria-label="Talker Ultra"><CrownIcon /></span>}</div>
+            <small>@{username || user.username}</small>
+            {user.isUltra && <small className="ultra-hint">GIF-аватар доступен благодаря Talker Ultra</small>}
+          </div>
           {avatarPath && <button type="button" className="profile-avatar-remove" onClick={() => void removeAvatar()} disabled={uploadingAvatar}>Удалить фото</button>}
         </div>
         <form className="profile-form" onSubmit={save}>

@@ -11,6 +11,7 @@ export const users = sqliteTable("users", {
   bio: text("bio"),
   bannerColor: text("banner_color"),
   lastActiveAt: integer("last_active_at"),
+  isUltra: integer("is_ultra", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("users_username_unique").on(table.username),

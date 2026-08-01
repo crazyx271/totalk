@@ -85,6 +85,7 @@ export async function PATCH(request: Request) {
       avatarPath: users.avatarPath,
       bio: users.bio,
       bannerColor: users.bannerColor,
+      isUltra: users.isUltra,
       createdAt: users.createdAt,
     });
 

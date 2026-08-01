@@ -6,10 +6,14 @@ import { avatarsDir, getDb } from "../../../../db";
 import { users } from "../../../../db/schema";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_GIF_AVATAR_BYTES = 8 * 1024 * 1024;
 const EXTENSION_BY_TYPE: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
+};
+const ULTRA_EXTENSION_BY_TYPE: Record<string, string> = {
+  "image/gif": "gif",
 };
 
 async function removeExistingAvatar(avatarPath: string | null) {
@@ -30,12 +34,15 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return Response.json({ error: "Файл не найден" }, { status: 400 });
   }
-  const extension = EXTENSION_BY_TYPE[file.type];
+  const extension = EXTENSION_BY_TYPE[file.type] ?? (user.isUltra ? ULTRA_EXTENSION_BY_TYPE[file.type] : undefined);
   if (!extension) {
-    return Response.json({ error: "Поддерживаются PNG, JPEG и WebP" }, { status: 400 });
+    return Response.json({
+      error: user.isUltra ? "Поддерживаются PNG, JPEG, WebP и GIF" : "Поддерживаются PNG, JPEG и WebP. GIF доступен с Talker Ultra",
+    }, { status: 400 });
   }
-  if (file.size > MAX_AVATAR_BYTES) {
-    return Response.json({ error: "Файл больше 2 МБ" }, { status: 400 });
+  const maxBytes = extension === "gif" ? MAX_GIF_AVATAR_BYTES : MAX_AVATAR_BYTES;
+  if (file.size > maxBytes) {
+    return Response.json({ error: `Файл больше ${Math.round(maxBytes / (1024 * 1024))} МБ` }, { status: 400 });
   }
 
   const db = getDb();

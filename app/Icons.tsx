@@ -86,6 +86,10 @@ export function DownloadIcon() {
   return <Icon><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></Icon>;
 }
 
+export function CrownIcon() {
+  return <Icon><path d="M3 18h18l-1.5-9-4.5 4-3-6-3 6-4.5-4L3 18z" /><line x1="5" y1="21" x2="19" y2="21" /></Icon>;
+}
+
 export function SettingsIcon() {
   return <Icon>
     <circle cx="12" cy="12" r="3" />

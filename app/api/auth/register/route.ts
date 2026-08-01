@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     displayName,
     passwordHash: credentials.hash,
     passwordSalt: credentials.salt,
-  }).returning({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath, bio: users.bio, bannerColor: users.bannerColor, createdAt: users.createdAt });
+  }).returning({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath, bio: users.bio, bannerColor: users.bannerColor, isUltra: users.isUltra, createdAt: users.createdAt });
 
   const session = await createSession(user.id, request);
   return Response.json({ user }, {

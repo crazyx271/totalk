@@ -1,7 +1,7 @@
 "use client";
 
 import Avatar from "./Avatar";
-import { CalendarIcon, MessageIcon, PhoneIcon, StarIcon, UsersIcon, XIcon } from "./Icons";
+import { CalendarIcon, CrownIcon, MessageIcon, PhoneIcon, StarIcon, UsersIcon, XIcon } from "./Icons";
 
 const BRAND_GRADIENT = "linear-gradient(135deg,#9688ff,#6958df)";
 const MEMBER_SINCE_FORMAT = new Intl.DateTimeFormat("ru", { day: "numeric", month: "long", year: "numeric" });
@@ -15,6 +15,7 @@ export type ProfileViewedUser = {
   bannerColor: string | null;
   createdAt: string;
   isOnline: boolean;
+  isUltra: boolean;
 };
 
 export default function UserProfileCard({
@@ -40,11 +41,15 @@ export default function UserProfileCard({
           </span>
         </div>
         <div className="profile-identity">
-          <div><b>{user.displayName}</b><small>@{user.username}</small></div>
+          <div>
+            <div className="profile-name-row"><b>{user.displayName}</b>{user.isUltra && <span className="ultra-mark" aria-label="Talker Ultra"><CrownIcon /></span>}</div>
+            <small>@{user.username}</small>
+          </div>
         </div>
         {user.bio && <p className="profile-bio">{user.bio}</p>}
         <div className="profile-badges">
           <span className={`profile-badge ${user.isOnline ? "online" : ""}`}><i className="status-dot" />{user.isOnline ? "В сети" : "Не в сети"}</span>
+          {user.isUltra && <span className="profile-badge ultra"><CrownIcon /><span>Talker Ultra</span></span>}
           {isFriend && <span className="profile-badge friend"><UsersIcon /><span>Друзья</span></span>}
           {user.id <= 20 && <span className="profile-badge early"><StarIcon /><span>Ранний участник</span></span>}
           <span className="profile-badge"><CalendarIcon /><span>На ToTalk с {MEMBER_SINCE_FORMAT.format(new Date(`${user.createdAt}Z`))}</span></span>

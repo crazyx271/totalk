@@ -64,6 +64,13 @@
       "when": 1785590944740,
       "tag": "0008_abandoned_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785597027646,
+      "tag": "0009_smart_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

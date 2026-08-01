@@ -7,6 +7,7 @@ export type Friend = {
   bannerColor: string | null;
   createdAt: string;
   isOnline: boolean;
+  isUltra: boolean;
   requestId?: number;
 };
 

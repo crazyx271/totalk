@@ -13,6 +13,7 @@ export type ToTalkUser = {
   avatarPath: string | null;
   bio: string | null;
   bannerColor: string | null;
+  isUltra: boolean;
   createdAt: string;
 };
 

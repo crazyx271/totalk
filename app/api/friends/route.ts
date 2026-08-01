@@ -11,6 +11,7 @@ type RawUser = {
   avatarPath: string | null;
   bio: string | null;
   bannerColor: string | null;
+  isUltra: boolean;
   createdAt: string;
   lastActiveAt: number | null;
 };
@@ -24,6 +25,7 @@ const publicUserColumns = {
   avatarPath: users.avatarPath,
   bio: users.bio,
   bannerColor: users.bannerColor,
+  isUltra: users.isUltra,
   createdAt: users.createdAt,
   lastActiveAt: users.lastActiveAt,
 };
