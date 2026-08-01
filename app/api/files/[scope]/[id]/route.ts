@@ -12,21 +12,22 @@ export async function GET(request: Request, context: { params: Promise<{ scope: 
   const id = Number(rawId);
   if (!Number.isInteger(id)) return new Response("Файл не найден", { status: 404 });
 
-  let record: { fileName: string | null; fileStoredName: string | null; fileMime: string | null } | undefined;
+  let record: { fileName: string | null; fileStoredName: string | null; fileMime: string | null; kind: string } | undefined;
   if (scope === "dm") {
-    [record] = await getDb().select({ fileName: directMessages.fileName, fileStoredName: directMessages.fileStoredName, fileMime: directMessages.fileMime })
+    [record] = await getDb().select({ fileName: directMessages.fileName, fileStoredName: directMessages.fileStoredName, fileMime: directMessages.fileMime, kind: directMessages.kind })
       .from(directMessages).where(and(eq(directMessages.id, id), or(eq(directMessages.senderId, user.id), eq(directMessages.recipientId, user.id)))).limit(1);
   } else if (scope === "channel") {
-    [record] = await getDb().select({ fileName: messages.fileName, fileStoredName: messages.fileStoredName, fileMime: messages.fileMime })
+    [record] = await getDb().select({ fileName: messages.fileName, fileStoredName: messages.fileStoredName, fileMime: messages.fileMime, kind: messages.kind })
       .from(messages).where(eq(messages.id, id)).limit(1);
   }
   if (!record?.fileStoredName || !record.fileName) return new Response("Файл не найден", { status: 404 });
   try {
     const bytes = await readFile(join(messageFilesDir(), record.fileStoredName));
     const safeName = record.fileName.replace(/[\r\n"]/g, "_");
+    const disposition = record.kind === "sticker" ? "inline" : `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`;
     return new Response(new Uint8Array(bytes), { headers: {
       "content-type": record.fileMime || "application/octet-stream",
-      "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+      "content-disposition": disposition,
       "cache-control": "private, max-age=3600",
     } });
   } catch {

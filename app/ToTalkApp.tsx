@@ -33,6 +33,7 @@ type Message = {
   fileName?: string | null;
   fileMime?: string | null;
   fileSize?: number | null;
+  stickerId?: number;
   mine?: boolean;
 };
 
@@ -414,6 +415,38 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     }
   }
 
+  async function sendImageSticker(stickerId: number) {
+    setShowStickers(false);
+    const temporaryId = temporaryMessageIdRef.current--;
+    setMessages((current) => [...current, {
+      id: temporaryId,
+      userId: user.id,
+      author: user.displayName,
+      username: user.username,
+      avatar: user.displayName.charAt(0).toUpperCase() || "В",
+      avatarPath: user.avatarPath,
+      avatarFrame: user.avatarFrame,
+      time: date.format(new Date()),
+      createdAtMs: Date.now(),
+      text: "Стикер",
+      kind: "sticker",
+      stickerId,
+      mine: true,
+    }]);
+    try {
+      const response = await fetch("/api/stickers/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "channel", serverId: workspace.id, channel, stickerId }),
+      });
+      if (!response.ok) throw new Error("send failed");
+      await loadMessages();
+    } catch {
+      setMessages((current) => current.filter((message) => message.id !== temporaryId));
+      setConnection("error");
+    }
+  }
+
   async function sendChannelFile(file: File) {
     if (sending) return;
     setSending(true);
@@ -593,7 +626,11 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
                 {grouped ? <time className="message-hover-time">{message.time}</time> : <Avatar name={message.author} avatarPath={message.avatarPath} avatarFrame={message.avatarFrame} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />}
                 <div>
                   {!grouped && <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>}
-                  {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : message.kind === "file" ? (
+                  {message.kind === "sticker" ? (
+                    message.fileMime || message.stickerId ? (
+                      <img className="sticker-bubble-image" src={message.fileMime ? `/api/files/channel/${message.id}` : `/api/stickers/image/${message.stickerId}`} alt="Стикер" />
+                    ) : <span className="sticker-bubble">{message.text}</span>
+                  ) : message.kind === "file" ? (
                     <a className="file-card" href={`/api/files/channel/${message.id}`} download><span><PaperclipIcon /></span><div><b>{message.fileName ?? message.text}</b><small>{message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon /></a>
                   ) : <p>{message.text}</p>}
                 </div>
@@ -607,7 +644,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Написать #${channel}`} aria-label="Сообщение" />
             <div className="sticker-anchor">
               <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
-              {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
+              {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onClose={() => setShowStickers(false)} />}
             </div>
             <button className="send" aria-label="Отправить" disabled={sending}><SendIcon /></button>
           </form>

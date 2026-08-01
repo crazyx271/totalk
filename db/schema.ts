@@ -142,6 +142,26 @@ export const directCalls = sqliteTable("direct_calls", {
   index("direct_calls_callee_idx").on(table.calleeId, table.status, table.updatedAt),
 ]);
 
+export const stickerPacks = sqliteTable("sticker_packs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  creatorId: integer("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("sticker_packs_creator_idx").on(table.creatorId),
+]);
+
+export const stickers = sqliteTable("stickers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  packId: integer("pack_id").notNull().references(() => stickerPacks.id, { onDelete: "cascade" }),
+  storedName: text("stored_name").notNull(),
+  mime: text("mime").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("stickers_pack_idx").on(table.packId, table.position),
+]);
+
 export const pushTokens = sqliteTable("push_tokens", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

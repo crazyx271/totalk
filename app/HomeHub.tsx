@@ -250,6 +250,17 @@ export default function HomeHub({
     await loadMessages();
   }
 
+  async function sendImageSticker(stickerId: number) {
+    if (!selectedFriend) return;
+    setShowStickers(false);
+    await fetch("/api/stickers/send", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "dm", friendId: selectedFriend.id, stickerId }),
+    });
+    await loadMessages();
+  }
+
   async function sendFile(file: File) {
     if (!selectedFriend || uploadingFile) return;
     setUploadingFile(true);
@@ -376,7 +387,11 @@ export default function HomeHub({
                   {grouped ? <time className="message-hover-time">{time.format(new Date(`${item.message.createdAt}Z`))}</time> : <Avatar name={item.message.author} avatarPath={item.message.avatarPath} avatarFrame={item.message.avatarFrame} className="friend-avatar small" />}
                   <div>
                     {!grouped && <><b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time></>}
-                    {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : item.message.kind === "file" ? (
+                    {item.message.kind === "sticker" ? (
+                      item.message.fileMime ? (
+                        <img className="sticker-bubble-image" src={`/api/files/dm/${item.message.id}`} alt="Стикер" />
+                      ) : <span className="sticker-bubble">{item.message.text}</span>
+                    ) : item.message.kind === "file" ? (
                       <a className="file-card" href={`/api/files/dm/${item.message.id}`} download>
                         <span><PaperclipIcon /></span><div><b>{item.message.fileName ?? item.message.text}</b><small>{item.message.fileSize ? `${(item.message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon />
                       </a>
@@ -399,7 +414,7 @@ export default function HomeHub({
               <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Сообщение для @${selectedFriend.username}`} />
               <div className="sticker-anchor">
                 <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
-                {showStickers && <StickerPicker onPick={(sticker) => void sendSticker(sticker)} onClose={() => setShowStickers(false)} />}
+                {showStickers && <StickerPicker currentUserId={user.id} onPick={(sticker) => void sendSticker(sticker)} onPickImage={(stickerId) => void sendImageSticker(stickerId)} onClose={() => setShowStickers(false)} />}
               </div>
               <button disabled={!draft.trim()} aria-label="Отправить"><SendIcon /></button>
             </form>

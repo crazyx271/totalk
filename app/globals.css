@@ -84,10 +84,39 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .dm-composer{margin:0 22px 20px;display:flex;background:#303139;border-radius:11px;overflow:hidden;transition:box-shadow .2s ease}.dm-composer input{flex:1;border:0;background:transparent;color:#fff;padding:14px;outline:none}.dm-composer button{width:48px;border:0;background:#6d5ce8;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.dm-composer button:disabled{opacity:.35}.dm-composer:focus-within{box-shadow:0 0 0 3px #7c6cf221}.dm-composer svg{width:18px;height:18px}
 .dm-composer .sticker-anchor button{background:transparent;color:#c9cad3}.dm-composer .sticker-anchor button:hover{color:#fff}
 .sticker-anchor{position:relative;display:flex}
-.sticker-picker{position:absolute;bottom:calc(100% + 10px);right:0;max-width:calc(100vw - 24px);display:grid;grid-template-columns:repeat(5,38px);gap:4px;background:#22232b;border:1px solid #3a3b46;border-radius:12px;padding:10px;box-shadow:0 14px 34px #0006;z-index:5;animation:stickerPopIn .15s ease}
-.sticker-picker button{width:38px;height:38px;font-size:22px;border:0;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.sticker-picker button:hover{background:#33343d}
+.sticker-picker{position:absolute;bottom:calc(100% + 10px);right:0;width:296px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;gap:8px;background:#22232b;border:1px solid #3a3b46;border-radius:12px;padding:10px;box-shadow:0 14px 34px #0006;z-index:5;animation:stickerPopIn .15s ease}
+.sticker-tabs{display:flex;align-items:center;gap:4px;overflow-x:auto;padding-bottom:6px;border-bottom:1px solid #ffffff0f;flex:none}
+.sticker-tabs button{flex:none;width:30px;height:30px;padding:0;border:0;border-radius:8px;background:transparent;color:#9298a8;font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sticker-tabs button:first-child{width:auto;padding:0 8px;font-size:11px}
+.sticker-tabs button img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.sticker-tabs button:hover{background:#33343d;color:#fff}
+.sticker-tabs button.active{background:var(--accent,#7467f0);color:#fff}
+.sticker-tab-add{color:#9298a8}.sticker-tab-add svg{width:14px;height:14px}
+.sticker-pack-create{display:flex;gap:6px;flex:none}
+.sticker-pack-create input{flex:1;min-width:0;height:32px;padding:0 10px;border:1px solid #3a3b46;border-radius:8px;background:#1a1b21;color:#fff;font-size:12px;outline:0}
+.sticker-pack-create input:focus{border-color:#7467f0}
+.sticker-pack-create button{flex:none;height:32px;padding:0 12px;border:0;border-radius:8px;background:#7467f0;color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.sticker-pack-create button:disabled{opacity:.5;cursor:default}
+.sticker-picker-error{flex:none;color:#f2a0ac;font-size:11px}
+.sticker-grid{display:grid;grid-template-columns:repeat(5,38px);gap:4px;max-height:220px;overflow-y:auto}
+.sticker-grid button{width:38px;height:38px;font-size:22px;border:0;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sticker-grid:not(.images) button:hover{background:#33343d}
+.sticker-grid.images{grid-template-columns:repeat(5,50px)}
+.sticker-item{position:relative;width:50px;height:50px}
+.sticker-item button{width:50px;height:50px;padding:4px;border-radius:9px}
+.sticker-item button:hover{background:#33343d}
+.sticker-item img{width:100%;height:100%;object-fit:contain}
+.sticker-item-remove{position:absolute;top:-5px;right:-5px;width:17px;height:17px;padding:0;border-radius:50%;background:#e0525f;color:#fff;opacity:0;transition:opacity .12s ease}
+.sticker-item-remove svg{width:9px;height:9px}
+.sticker-item:hover .sticker-item-remove{opacity:1}
+.sticker-item-upload{width:50px;height:50px;border:1.5px dashed #454754;border-radius:9px;color:#7c8296;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sticker-item-upload svg{width:16px;height:16px}
+.sticker-item-upload:hover{border-color:#7467f0;color:#7467f0}
+.sticker-empty{grid-column:1/-1;margin:10px 4px;color:#7c8296;font-size:11px}
+.sticker-pack-delete{flex:none;height:30px;border:0;border-radius:8px;background:transparent;color:#e0525f;font-size:11px;font-weight:700;cursor:pointer}
+.sticker-pack-delete:hover{background:#e0525f1c}
 .sticker-bubble{font-size:44px;line-height:1.15;display:inline-block;margin-top:4px}
+.sticker-bubble-image{display:block;max-width:168px;max-height:168px;width:auto;height:auto;margin-top:4px;border-radius:8px}
 @keyframes stickerPopIn{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
 .call-toast{position:fixed;right:24px;top:24px;z-index:20;display:flex;align-items:center;gap:12px;width:min(390px,calc(100vw - 32px));padding:15px;border:1px solid #ffffff18;border-radius:16px;background:#1d1f26;box-shadow:0 24px 70px #0008;animation:voiceOverlayIn .2s ease}.call-toast>div{display:flex;flex-direction:column;flex:1}.call-toast small{font-size:9px;color:#62d79c;letter-spacing:.1em}.call-toast button{border:0;border-radius:10px;padding:0;width:38px;height:38px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.accept-call{background:#31895f}.decline-call{background:#bc4056!important}
 .voice-pulse{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#8d7dff,#5b4bd1);font-weight:800;box-shadow:0 0 0 5px #62d79c1c;flex:none}
