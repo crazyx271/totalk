@@ -169,7 +169,7 @@ export default function Home() {
 
       {!isDesktop && (
         <section className="public-download-banner">
-          <div><span>TOtalk НА ВСЕХ УСТРОЙСТВАХ</span><h2>Продолжайте разговор где угодно.</h2><p>Выберите свою систему на отдельной странице загрузки. Для Linux и телефонов доступна устанавливаемая веб-версия.</p></div>
+          <div><span>TOTALK НА ВСЕХ УСТРОЙСТВАХ</span><h2>Продолжайте разговор где угодно.</h2><p>Выберите свою систему на отдельной странице загрузки. Для Linux и телефонов доступна устанавливаемая веб-версия.</p></div>
           <a className="public-primary" href="/download"><DownloadIcon />Перейти к загрузкам</a>
         </section>
       )}
