@@ -1,0 +1,1 @@
+ALTER TABLE `direct_calls` ADD `accepted_at` integer;

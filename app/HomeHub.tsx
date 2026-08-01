@@ -23,6 +23,7 @@ type Friend = {
   bio: string | null;
   bannerColor: string | null;
   createdAt: string;
+  isOnline: boolean;
   requestId?: number;
 };
 
@@ -48,12 +49,34 @@ type DirectCall = {
   person: Friend;
 };
 
+type CallHistoryEntry = {
+  id: number;
+  incoming: boolean;
+  status: "ended" | "declined";
+  missed: boolean;
+  durationMs: number;
+  createdAt: number;
+};
+
 type SocialData = {
   friends: Friend[];
   incoming: Friend[];
   outgoing: Friend[];
   results: Friend[];
 };
+
+function formatCallDuration(durationMs: number) {
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function describeCall(call: CallHistoryEntry) {
+  if (call.status === "declined") return call.incoming ? "Вы отклонили звонок" : "Звонок отклонён";
+  if (call.missed) return call.incoming ? "Пропущенный звонок" : "Нет ответа";
+  return `${call.incoming ? "Входящий" : "Исходящий"} звонок · ${formatCallDuration(call.durationMs)}`;
+}
 
 const emptySocial: SocialData = { friends: [], incoming: [], outgoing: [], results: [] };
 
@@ -79,6 +102,7 @@ export default function HomeHub({
   const [search, setSearch] = useState("");
   const [searched, setSearched] = useState(false);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);
   const [draft, setDraft] = useState("");
   const [showStickers, setShowStickers] = useState(false);
   const [notice, setNotice] = useState("");
@@ -88,6 +112,20 @@ export default function HomeHub({
   const leaveVoice = voice.leave;
   const voiceRoom = voice.room;
   const time = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
+
+  const timeline = useMemo(() => {
+    const messageItems = messages.map((message) => ({
+      type: "message" as const,
+      epoch: new Date(`${message.createdAt}Z`).getTime(),
+      message,
+    }));
+    const callItems = callHistory.map((call) => ({
+      type: "call" as const,
+      epoch: call.createdAt,
+      call,
+    }));
+    return [...messageItems, ...callItems].sort((a, b) => a.epoch - b.epoch);
+  }, [messages, callHistory]);
 
   const loadSocial = useCallback(async (query = "") => {
     const trimmed = query.trim();
@@ -122,6 +160,17 @@ export default function HomeHub({
     setMessages(data.messages);
   }, [selectedFriend]);
 
+  const loadCallHistory = useCallback(async () => {
+    if (!selectedFriend) {
+      setCallHistory([]);
+      return;
+    }
+    const response = await fetch(`/api/calls?friend=${selectedFriend.id}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json() as { history: CallHistoryEntry[] };
+    setCallHistory(data.history);
+  }, [selectedFriend]);
+
   const loadCalls = useCallback(async () => {
     const response = await fetch("/api/calls", { cache: "no-store" });
     if (!response.ok) return;
@@ -148,13 +197,14 @@ export default function HomeHub({
   }, [loadSocial]);
 
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => void loadMessages(), 0);
-    const timer = window.setInterval(() => void loadMessages(), 2000);
+    const load = () => { void loadMessages(); void loadCallHistory(); };
+    const initialLoad = window.setTimeout(load, 0);
+    const timer = window.setInterval(load, 2000);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(timer);
     };
-  }, [loadMessages]);
+  }, [loadMessages, loadCallHistory]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadCalls(), 0);
@@ -264,13 +314,14 @@ export default function HomeHub({
       playEndTone();
     }
     await voice.leave();
+    await loadCallHistory();
   }
 
   const renderPerson = (friend: Friend, actions?: ReactNode) => (
     <div className="friend-row" key={friend.id}>
       <div className="friend-main">
         <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
-          <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar" />
+          <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar">{friend.isOnline && <i />}</Avatar>
         </button>
         <button type="button" className="friend-name-btn" onClick={() => setSelectedFriend(friend)}>
           <b>{friend.displayName}</b><small>@{friend.username}</small>
@@ -308,7 +359,7 @@ export default function HomeHub({
           {social.friends.map((friend) => (
             <div className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id}>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
-                <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small" />
+                <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small">{friend.isOnline && <i />}</Avatar>
               </button>
               <button type="button" className="dm-person-name" onClick={() => { setSelectedFriend(friend); setMobileNavOpen(false); }}>
                 <b>{friend.displayName}</b><small>@{friend.username}</small>
@@ -347,23 +398,29 @@ export default function HomeHub({
               <button type="button" className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Список диалогов"><MenuIcon /></button>
               <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад"><ChevronLeftIcon /></button>
               <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(selectedFriend)} aria-label={`Профиль ${selectedFriend.displayName}`}>
-                <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
+                <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar">{selectedFriend.isOnline && <i />}</Avatar>
               </button>
               <button type="button" className="dm-header-name" onClick={() => setViewedProfile(selectedFriend)}>
-                <b>{selectedFriend.displayName}</b><small>@{selectedFriend.username}</small>
+                <b>{selectedFriend.displayName}</b><small>{selectedFriend.isOnline ? "В сети" : `@${selectedFriend.username}`}</small>
               </button>
               <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}><PhoneIcon /><span>Позвонить</span></button>
             </header>
             <div className="dm-messages">
-              {messages.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
-              {messages.map((message) => (
-                <article className={`dm-message ${message.senderId === user.id ? "mine" : ""} ${message.kind === "sticker" ? "sticker-message" : ""}`} key={message.id}>
-                  <Avatar name={message.author} avatarPath={message.avatarPath} className="friend-avatar small" />
+              {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
+              {timeline.map((item) => item.type === "message" ? (
+                <article className={`dm-message ${item.message.senderId === user.id ? "mine" : ""} ${item.message.kind === "sticker" ? "sticker-message" : ""}`} key={`message-${item.message.id}`}>
+                  <Avatar name={item.message.author} avatarPath={item.message.avatarPath} className="friend-avatar small" />
                   <div>
-                    <b>{message.author}</b><time>{time.format(new Date(`${message.createdAt}Z`))}</time>
-                    {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
+                    <b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time>
+                    {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : <p>{item.message.text}</p>}
                   </div>
                 </article>
+              ) : (
+                <div className={`dm-call-event ${item.call.missed || item.call.status === "declined" ? "unsuccessful" : ""}`} key={`call-${item.call.id}`}>
+                  {item.call.missed || item.call.status === "declined" ? <PhoneOffIcon /> : <PhoneIcon />}
+                  <span>{describeCall(item.call)}</span>
+                  <time>{time.format(new Date(item.call.createdAt))}</time>
+                </div>
               ))}
             </div>
             <form className="dm-composer" onSubmit={sendMessage}>

@@ -10,6 +10,7 @@ export const users = sqliteTable("users", {
   avatarPath: text("avatar_path"),
   bio: text("bio"),
   bannerColor: text("banner_color"),
+  lastActiveAt: integer("last_active_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("users_username_unique").on(table.username),
@@ -93,6 +94,7 @@ export const directCalls = sqliteTable("direct_calls", {
   calleeId: integer("callee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   room: text("room").notNull(),
   status: text("status").notNull().default("ringing"),
+  acceptedAt: integer("accepted_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 }, (table) => [

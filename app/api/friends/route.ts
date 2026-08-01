@@ -2,9 +2,9 @@ import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { friendships, users } from "../../../db/schema";
-import { friendPairKey } from "../../social";
+import { friendPairKey, isOnline } from "../../social";
 
-type PublicUser = {
+type RawUser = {
   id: number;
   username: string;
   displayName: string;
@@ -12,11 +12,10 @@ type PublicUser = {
   bio: string | null;
   bannerColor: string | null;
   createdAt: string;
+  lastActiveAt: number | null;
 };
 
-function publicUser(user: PublicUser) {
-  return user;
-}
+type PublicUser = Omit<RawUser, "lastActiveAt"> & { isOnline: boolean };
 
 const publicUserColumns = {
   id: users.id,
@@ -26,7 +25,13 @@ const publicUserColumns = {
   bio: users.bio,
   bannerColor: users.bannerColor,
   createdAt: users.createdAt,
+  lastActiveAt: users.lastActiveAt,
 };
+
+function publicUser(user: RawUser): PublicUser {
+  const { lastActiveAt, ...rest } = user;
+  return { ...rest, isOnline: isOnline(lastActiveAt) };
+}
 
 export async function GET(request: Request) {
   const currentUser = await getSessionUser(request);
@@ -66,7 +71,7 @@ export async function GET(request: Request) {
     // (overridden to be Unicode-aware in db/index.ts) instead of relying on
     // LIKE's built-in folding — otherwise Cyrillic search misses case variants.
     const needle = `%${query.toLowerCase()}%`;
-    results = await db.select(publicUserColumns)
+    const rows = await db.select(publicUserColumns)
       .from(users)
       .where(and(
         ne(users.id, currentUser.id),
@@ -76,6 +81,7 @@ export async function GET(request: Request) {
         ),
       ))
       .limit(20);
+    results = rows.map(publicUser);
   }
 
   return Response.json({ friends, incoming, outgoing, results });

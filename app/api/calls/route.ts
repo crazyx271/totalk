@@ -1,14 +1,39 @@
-import { and, desc, eq, gt, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, or } from "drizzle-orm";
 import { getSessionUser } from "../../auth";
 import { getDb } from "../../../db";
 import { directCalls, users } from "../../../db/schema";
 import { areFriends, friendPairKey } from "../../social";
 
 const CALL_TTL_MS = 5 * 60_000;
+const HISTORY_LIMIT = 30;
 
 export async function GET(request: Request) {
   const currentUser = await getSessionUser(request);
   if (!currentUser) return Response.json({ error: "Требуется вход" }, { status: 401 });
+
+  const friendParam = new URL(request.url).searchParams.get("friend");
+  if (friendParam) {
+    const friendId = Number(friendParam);
+    if (!Number.isInteger(friendId)) return Response.json({ error: "Некорректный запрос" }, { status: 400 });
+    const rows = await getDb().select().from(directCalls).where(and(
+      or(
+        and(eq(directCalls.callerId, currentUser.id), eq(directCalls.calleeId, friendId)),
+        and(eq(directCalls.callerId, friendId), eq(directCalls.calleeId, currentUser.id)),
+      ),
+      inArray(directCalls.status, ["ended", "declined"]),
+    )).orderBy(desc(directCalls.updatedAt)).limit(HISTORY_LIMIT);
+    return Response.json({
+      history: rows.map((call) => ({
+        id: call.id,
+        incoming: call.calleeId === currentUser.id,
+        status: call.status as "ended" | "declined",
+        missed: call.acceptedAt === null,
+        durationMs: call.acceptedAt !== null ? Math.max(0, call.updatedAt - call.acceptedAt) : 0,
+        createdAt: call.createdAt,
+      })),
+    });
+  }
+
   const rows = await getDb().select({
     id: directCalls.id,
     callerId: directCalls.callerId,
@@ -85,8 +110,9 @@ export async function POST(request: Request) {
   if (!call) return Response.json({ error: "Звонок не найден" }, { status: 404 });
 
   if (payload.action === "accept" && call.calleeId === currentUser.id && call.status === "ringing") {
-    await db.update(directCalls).set({ status: "accepted", updatedAt: Date.now() }).where(eq(directCalls.id, callId));
-    return Response.json({ call: { ...call, status: "accepted" } });
+    const acceptedAt = Date.now();
+    await db.update(directCalls).set({ status: "accepted", acceptedAt, updatedAt: acceptedAt }).where(eq(directCalls.id, callId));
+    return Response.json({ call: { ...call, status: "accepted", acceptedAt } });
   }
   if (payload.action === "decline" || payload.action === "end") {
     await db.update(directCalls).set({ status: payload.action === "decline" ? "declined" : "ended", updatedAt: Date.now() })

@@ -14,6 +14,7 @@ export type ProfileViewedUser = {
   bio: string | null;
   bannerColor: string | null;
   createdAt: string;
+  isOnline: boolean;
 };
 
 export default function UserProfileCard({
@@ -35,7 +36,7 @@ export default function UserProfileCard({
         <button className="modal-close" onClick={onClose} aria-label="Закрыть"><XIcon /></button>
         <div className="profile-banner" style={{ background: user.bannerColor ?? BRAND_GRADIENT }}>
           <span className="profile-avatar-edit" aria-hidden="true">
-            <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self profile-avatar-large" />
+            <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self profile-avatar-large">{user.isOnline && <i />}</Avatar>
           </span>
         </div>
         <div className="profile-identity">
@@ -43,6 +44,7 @@ export default function UserProfileCard({
         </div>
         {user.bio && <p className="profile-bio">{user.bio}</p>}
         <div className="profile-badges">
+          <span className={`profile-badge ${user.isOnline ? "online" : ""}`}><i className="status-dot" />{user.isOnline ? "В сети" : "Не в сети"}</span>
           {isFriend && <span className="profile-badge friend"><UsersIcon /><span>Друзья</span></span>}
           {user.id <= 20 && <span className="profile-badge early"><StarIcon /><span>Ранний участник</span></span>}
           <span className="profile-badge"><CalendarIcon /><span>На ToTalk с {MEMBER_SINCE_FORMAT.format(new Date(`${user.createdAt}Z`))}</span></span>

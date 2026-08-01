@@ -93,6 +93,13 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     };
   }, [loadMessages]);
 
+  useEffect(() => {
+    const ping = () => void fetch("/api/presence", { method: "POST" });
+    ping();
+    const timer = window.setInterval(ping, 25_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   function openWorkspace() {
     setChannel(workspace.channels[0]);
     setHomeMode(false);
