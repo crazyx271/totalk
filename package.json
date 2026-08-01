@@ -1,6 +1,6 @@
 {
   "name": "totalk",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

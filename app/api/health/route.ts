@@ -14,7 +14,7 @@ export async function GET() {
   return Response.json({
     ok: true,
     service: "totalk",
-    version: "0.2.1",
+    version: "1.0.0",
     timestamp: new Date().toISOString(),
     checks: {
       dbConfigured: isDbReachable(),
