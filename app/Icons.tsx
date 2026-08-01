@@ -90,6 +90,18 @@ export function CrownIcon() {
   return <Icon><path d="M3 18h18l-1.5-9-4.5 4-3-6-3 6-4.5-4L3 18z" /><line x1="5" y1="21" x2="19" y2="21" /></Icon>;
 }
 
+export function WindowMinimizeIcon() {
+  return <Icon><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
+}
+
+export function WindowMaximizeIcon() {
+  return <Icon><rect x="5" y="5" width="14" height="14" rx="1" /></Icon>;
+}
+
+export function WindowRestoreIcon() {
+  return <Icon><rect x="8" y="4" width="12" height="12" rx="1" /><path d="M4 8v12h12" /></Icon>;
+}
+
 export function SettingsIcon() {
   return <Icon>
     <circle cx="12" cy="12" r="3" />

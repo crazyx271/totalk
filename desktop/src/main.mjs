@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, session, shell } from "electron";
+import { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOTALK_URL = process.env.TOTALK_URL?.trim() || "https://totalker.ru/";
 const TOTALK_ORIGIN = new URL(TOTALK_URL).origin;
 const ICON_PATH = path.join(__dirname, "..", "assets", "icon.png");
+const PRELOAD_PATH = path.join(__dirname, "preload.mjs");
 
 app.setName("ToTalk");
 app.setAppUserModelId("com.totalk.desktop");
@@ -20,6 +21,8 @@ app.setAppUserModelId("com.totalk.desktop");
 // only the tray menu's "Выйти" (or Cmd/Ctrl+Q) actually exits the app.
 let isQuitting = false;
 let tray = null;
+let mainWindow = null;
+let splashWindow = null;
 
 function createMenu() {
   const template = [
@@ -54,6 +57,28 @@ function createMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+function createSplashWindow() {
+  const splash = new BrowserWindow({
+    width: 360,
+    height: 420,
+    frame: false,
+    resizable: false,
+    movable: false,
+    show: false,
+    skipTaskbar: true,
+    backgroundColor: "#111216",
+    icon: ICON_PATH,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  });
+  splash.once("ready-to-show", () => splash.show());
+  void splash.loadFile(path.join(__dirname, "splash.html"));
+  return splash;
+}
+
 function createWindow() {
   const window = new BrowserWindow({
     title: "ToTalk",
@@ -63,7 +88,7 @@ function createWindow() {
     minHeight: 560,
     backgroundColor: "#111216",
     show: false,
-    autoHideMenuBar: process.platform !== "darwin",
+    frame: false,
     icon: ICON_PATH,
     webPreferences: {
       nodeIntegration: false,
@@ -71,17 +96,25 @@ function createWindow() {
       sandbox: true,
       spellcheck: true,
       devTools: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      preload: PRELOAD_PATH
     }
   });
 
-  window.once("ready-to-show", () => window.show());
+  window.once("ready-to-show", () => {
+    window.show();
+    if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
+    splashWindow = null;
+  });
 
   window.on("close", (event) => {
     if (isQuitting) return;
     event.preventDefault();
     window.hide();
   });
+
+  window.on("maximize", () => window.webContents.send("window:maximized-changed", true));
+  window.on("unmaximize", () => window.webContents.send("window:maximized-changed", false));
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (new URL(url).origin === TOTALK_ORIGIN) {
@@ -110,11 +143,10 @@ function createWindow() {
 }
 
 function showMainWindow() {
-  const [window] = BrowserWindow.getAllWindows();
-  if (!window) return;
-  if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 function createTray() {
@@ -133,6 +165,15 @@ function createTray() {
   tray.on("click", showMainWindow);
 }
 
+ipcMain.on("window:minimize", () => mainWindow?.minimize());
+ipcMain.on("window:toggle-maximize", () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+ipcMain.on("window:close", () => mainWindow?.close());
+ipcMain.handle("window:is-maximized", () => mainWindow?.isMaximized() ?? false);
+
 app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
     return permission === "media" && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
@@ -142,11 +183,12 @@ app.whenReady().then(() => {
     callback(permission === "media" && sameOrigin);
   });
   createMenu();
-  createWindow();
+  splashWindow = createSplashWindow();
+  mainWindow = createWindow();
   createTray();
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
     else showMainWindow();
   });
 

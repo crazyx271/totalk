@@ -4,6 +4,20 @@
 * { box-sizing:border-box; }
 html, body { margin:0; min-height:100%; overflow:hidden; background:#111216; color:var(--ink); font-family:var(--font-geist), Inter, system-ui, sans-serif; }
 button, input { font:inherit; }
+
+/* Desktop app custom title bar — replaces the native OS window frame
+   (frame:false in Electron) with our own draggable bar + window controls. */
+.desktop-titlebar{display:flex;align-items:center;justify-content:space-between;height:36px;padding:0 0 0 12px;background:#0d0e12;border-bottom:1px solid #1c1d23;-webkit-app-region:drag;flex:none}
+.desktop-titlebar-brand{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#c7c8d1;letter-spacing:.02em}
+.desktop-titlebar-brand span{display:grid;place-items:center;width:18px;height:18px;border-radius:6px;background:linear-gradient(145deg,#9688ff,#6958df);font-size:11px;font-weight:900;color:#fff}
+.desktop-titlebar-controls{display:flex;height:100%;-webkit-app-region:no-drag}
+.desktop-titlebar-controls button{width:46px;height:100%;border:0;border-radius:0;background:transparent;color:#9a9cac;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.desktop-titlebar-controls button:hover{background:#1c1d23;color:#fff}
+.desktop-titlebar-controls button.desktop-titlebar-close:hover{background:#e0424f;color:#fff}
+.desktop-titlebar-controls svg{width:13px;height:13px}
+.has-desktop-titlebar .app-shell{height:calc(100dvh - 36px)}
+.has-desktop-titlebar .auth-shell{min-height:calc(100dvh - 36px)}
+.has-desktop-titlebar .landing{min-height:calc(100dvh - 36px)}
 button { color:inherit; }
 button:not(:disabled){transition:transform .12s ease,filter .12s ease,background-color .15s ease,box-shadow .15s ease}
 button:not(:disabled):hover{filter:brightness(1.08)}
