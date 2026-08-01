@@ -8,6 +8,8 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   avatarPath: text("avatar_path"),
+  bio: text("bio"),
+  bannerColor: text("banner_color"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("users_username_unique").on(table.username),

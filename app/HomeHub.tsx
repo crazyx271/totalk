@@ -5,6 +5,7 @@ import type { ToTalkUser } from "./page";
 import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
 import ProfileModal from "./ProfileModal";
+import UserProfileCard from "./UserProfileCard";
 import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
@@ -17,6 +18,9 @@ type Friend = {
   username: string;
   displayName: string;
   avatarPath: string | null;
+  bio: string | null;
+  bannerColor: string | null;
+  createdAt: string;
   requestId?: number;
 };
 
@@ -64,6 +68,7 @@ export default function HomeHub({
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
   const [showProfile, setShowProfile] = useState(false);
+  const [viewedProfile, setViewedProfile] = useState<Friend | null>(null);
   const [section, setSection] = useState<"friends" | "pending" | "add">("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [search, setSearch] = useState("");
@@ -258,10 +263,14 @@ export default function HomeHub({
 
   const renderPerson = (friend: Friend, actions?: ReactNode) => (
     <div className="friend-row" key={friend.id}>
-      <button className="friend-main" onClick={() => setSelectedFriend(friend)}>
-        <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar" />
-        <span><b>{friend.displayName}</b><small>@{friend.username}</small></span>
-      </button>
+      <div className="friend-main">
+        <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
+          <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar" />
+        </button>
+        <button type="button" className="friend-name-btn" onClick={() => setSelectedFriend(friend)}>
+          <b>{friend.displayName}</b><small>@{friend.username}</small>
+        </button>
+      </div>
       <div className="friend-actions">{actions}</div>
     </div>
   );
@@ -292,10 +301,14 @@ export default function HomeHub({
         <div className="home-side-title"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button onClick={() => { setSelectedFriend(null); setSection("add"); }} aria-label="Добавить друга"><PlusIcon /></button></div>
         <div className="dm-list">
           {social.friends.map((friend) => (
-            <button className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id} onClick={() => setSelectedFriend(friend)}>
-              <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small" />
-              <span><b>{friend.displayName}</b><small>@{friend.username}</small></span>
-            </button>
+            <div className={`dm-person ${selectedFriend?.id === friend.id ? "active" : ""}`} key={friend.id}>
+              <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(friend)} aria-label={`Профиль ${friend.displayName}`}>
+                <Avatar name={friend.displayName} avatarPath={friend.avatarPath} className="friend-avatar small" />
+              </button>
+              <button type="button" className="dm-person-name" onClick={() => setSelectedFriend(friend)}>
+                <b>{friend.displayName}</b><small>@{friend.username}</small>
+              </button>
+            </div>
           ))}
           {social.friends.length === 0 && <p className="empty-side">Здесь появятся ваши друзья</p>}
         </div>
@@ -308,14 +321,27 @@ export default function HomeHub({
         </div>
       </aside>
       {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
+      {viewedProfile && (
+        <UserProfileCard
+          user={viewedProfile}
+          isFriend={social.friends.some((friend) => friend.id === viewedProfile.id)}
+          onClose={() => setViewedProfile(null)}
+          onMessage={() => { setSelectedFriend(viewedProfile); setViewedProfile(null); }}
+          onCall={() => { void startCall(viewedProfile); setViewedProfile(null); }}
+        />
+      )}
 
       <section className="home-content">
         {selectedFriend ? (
           <>
             <header className="dm-header">
               <button className="dm-back" onClick={() => setSelectedFriend(null)} aria-label="Назад"><ChevronLeftIcon /></button>
-              <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
-              <span><b>{selectedFriend.displayName}</b><small>@{selectedFriend.username}</small></span>
+              <button type="button" className="friend-avatar-btn" onClick={() => setViewedProfile(selectedFriend)} aria-label={`Профиль ${selectedFriend.displayName}`}>
+                <Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar" />
+              </button>
+              <button type="button" className="dm-header-name" onClick={() => setViewedProfile(selectedFriend)}>
+                <b>{selectedFriend.displayName}</b><small>@{selectedFriend.username}</small>
+              </button>
               <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}><PhoneIcon /><span>Позвонить</span></button>
             </header>
             <div className="dm-messages">

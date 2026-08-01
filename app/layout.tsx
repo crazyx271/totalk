@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     images: [{ url: "/og.png", width: 1536, height: 1024, alt: "ToTalk — общение без границ" }],
   },
   twitter: { card: "summary_large_image", images: ["/og.png"] },
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

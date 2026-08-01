@@ -8,6 +8,9 @@ export type ToTalkUser = {
   username: string;
   displayName: string;
   avatarPath: string | null;
+  bio: string | null;
+  bannerColor: string | null;
+  createdAt: string;
 };
 
 export default function Home() {

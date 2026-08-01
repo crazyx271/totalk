@@ -4,9 +4,29 @@ import { getDb } from "../../../db";
 import { friendships, users } from "../../../db/schema";
 import { friendPairKey } from "../../social";
 
-function publicUser(user: { id: number; username: string; displayName: string; avatarPath: string | null }) {
+type PublicUser = {
+  id: number;
+  username: string;
+  displayName: string;
+  avatarPath: string | null;
+  bio: string | null;
+  bannerColor: string | null;
+  createdAt: string;
+};
+
+function publicUser(user: PublicUser) {
   return user;
 }
+
+const publicUserColumns = {
+  id: users.id,
+  username: users.username,
+  displayName: users.displayName,
+  avatarPath: users.avatarPath,
+  bio: users.bio,
+  bannerColor: users.bannerColor,
+  createdAt: users.createdAt,
+};
 
 export async function GET(request: Request) {
   const currentUser = await getSessionUser(request);
@@ -21,7 +41,7 @@ export async function GET(request: Request) {
     relation.requesterId === currentUser.id ? relation.addresseeId : relation.requesterId,
   ))];
   const relatedUsers = relatedIds.length
-    ? await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath })
+    ? await db.select(publicUserColumns)
       .from(users).where(inArray(users.id, relatedIds))
     : [];
   const byId = new Map(relatedUsers.map((user) => [user.id, publicUser(user)]));
@@ -40,13 +60,13 @@ export async function GET(request: Request) {
     .filter((user) => Boolean(user.id));
 
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 32) ?? "";
-  let results: Array<{ id: number; username: string; displayName: string; avatarPath: string | null }> = [];
+  let results: PublicUser[] = [];
   if (query.length >= 2) {
     // SQLite's LIKE only case-folds ASCII, so match on an explicit lower()
     // (overridden to be Unicode-aware in db/index.ts) instead of relying on
     // LIKE's built-in folding — otherwise Cyrillic search misses case variants.
     const needle = `%${query.toLowerCase()}%`;
-    results = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath })
+    results = await db.select(publicUserColumns)
       .from(users)
       .where(and(
         ne(users.id, currentUser.id),

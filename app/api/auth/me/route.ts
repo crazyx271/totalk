@@ -17,6 +17,8 @@ export async function PATCH(request: Request) {
     username?: string;
     currentPassword?: string;
     newPassword?: string;
+    bio?: string;
+    bannerColor?: string | null;
   };
 
   const db = getDb();
@@ -58,12 +60,33 @@ export async function PATCH(request: Request) {
     updates.passwordSalt = credentials.salt;
   }
 
+  if (payload.bio !== undefined) {
+    const bio = payload.bio.trim().slice(0, 190);
+    updates.bio = bio || null;
+  }
+
+  if (payload.bannerColor !== undefined) {
+    const bannerColor = payload.bannerColor?.trim() ?? "";
+    if (bannerColor && !/^#[0-9a-fA-F]{6}$/.test(bannerColor)) {
+      return Response.json({ error: "Некорректный цвет баннера" }, { status: 400 });
+    }
+    updates.bannerColor = bannerColor || null;
+  }
+
   if (Object.keys(updates).length === 0) {
     return Response.json({ error: "Нечего сохранять" }, { status: 400 });
   }
 
   const [updated] = await db.update(users).set(updates).where(eq(users.id, sessionUser.id))
-    .returning({ id: users.id, username: users.username, displayName: users.displayName, avatarPath: users.avatarPath });
+    .returning({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarPath: users.avatarPath,
+      bio: users.bio,
+      bannerColor: users.bannerColor,
+      createdAt: users.createdAt,
+    });
 
   return Response.json({ user: updated });
 }

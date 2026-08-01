@@ -100,6 +100,9 @@ export async function getSessionUser(request: Request) {
       username: users.username,
       displayName: users.displayName,
       avatarPath: users.avatarPath,
+      bio: users.bio,
+      bannerColor: users.bannerColor,
+      createdAt: users.createdAt,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
