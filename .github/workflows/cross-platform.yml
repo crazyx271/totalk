@@ -12,6 +12,8 @@ on:
 jobs:
   macos-desktop:
     runs-on: macos-latest
+    env:
+      HAS_MAC_CERTIFICATE: ${{ secrets.MAC_CSC_LINK != '' }}
     defaults:
       run:
         working-directory: desktop
@@ -24,12 +26,12 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - name: Build unsigned macOS DMG
-        if: ${{ secrets.MAC_CSC_LINK == '' }}
+        if: ${{ env.HAS_MAC_CERTIFICATE != 'true' }}
         run: npm run dist:mac
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - name: Build signed macOS DMG
-        if: ${{ secrets.MAC_CSC_LINK != '' }}
+        if: ${{ env.HAS_MAC_CERTIFICATE == 'true' }}
         run: npm run dist:mac
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
