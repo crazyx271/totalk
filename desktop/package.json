@@ -7,8 +7,11 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis --x64",
-    "dist:mac": "electron-builder --mac dmg --x64 --arm64"
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "electron-builder --mac dmg --x64 --arm64 --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
   },
   "devDependencies": {
     "electron": "43.2.0",
@@ -28,6 +31,12 @@
       "output": "release",
       "buildResources": "assets"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://totalker.ru/downloads/"
+      }
+    ],
     "win": {
       "target": [
         {

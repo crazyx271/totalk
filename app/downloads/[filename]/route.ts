@@ -5,6 +5,8 @@ import { downloadsDir } from "../../../db";
 const CONTENT_TYPES: Record<string, string> = {
   ".exe": "application/x-msdownload",
   ".dmg": "application/x-apple-diskimage",
+  ".yml": "application/x-yaml",
+  ".blockmap": "application/octet-stream",
 };
 
 export async function GET(_request: Request, { params }: { params: Promise<{ filename: string }> }) {
