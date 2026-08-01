@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import type { Sticker } from "./stickers";
 import type { ToTalkUser } from "./page";
-import { LogOutIcon, MenuIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon } from "./Icons";
+import { DownloadIcon, LogOutIcon, MenuIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon } from "./Icons";
 import { MicIcon, MicOffIcon, PhoneOffIcon } from "./CallIcons";
 
 type Message = {
@@ -207,7 +207,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           {voice.room && voice.status === "connected" && voice.participants.length === 0 && <div className="voice-empty">Пока вы один в комнате</div>}
           {voice.error && <div className="voice-error">{voice.error}</div>}
         </div>
-        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? <MicOffIcon /> : <MicIcon />}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал"><PhoneOffIcon /></button></>}<button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button></div>
+        <div className="user-bar"><button className="user-bar-identity" onClick={() => setShowProfile(true)} aria-label="Открыть профиль"><Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar><span><b>{user.displayName}</b><small>{voice.room ? `Голос: ${voice.room}` : `@${user.username}`}</small></span></button>{voice.room && <><button onClick={voice.toggleMute} aria-label={voice.muted ? "Включить микрофон" : "Выключить микрофон"}>{voice.muted ? <MicOffIcon /> : <MicIcon />}</button><button onClick={() => void voice.leave()} aria-label="Покинуть голосовой канал"><PhoneOffIcon /></button></>}<a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a><button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button></div>
         {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
       </aside>
 

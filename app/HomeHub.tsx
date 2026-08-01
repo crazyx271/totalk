@@ -10,7 +10,7 @@ import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
-import { CheckIcon, ChevronLeftIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { PhoneOffIcon } from "./CallIcons";
 
 type Friend = {
@@ -318,6 +318,7 @@ export default function HomeHub({
             <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar>
             <span><b>{user.displayName}</b><small>@{user.username}</small></span>
           </button>
+          <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>
           <button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button>
         </div>
       </aside>
