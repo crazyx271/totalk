@@ -18,8 +18,15 @@ export async function GET(request: Request) {
     updatedAt: directCalls.updatedAt,
   }).from(directCalls).where(and(
     or(eq(directCalls.callerId, currentUser.id), eq(directCalls.calleeId, currentUser.id)),
-    or(eq(directCalls.status, "ringing"), eq(directCalls.status, "accepted")),
-    gt(directCalls.updatedAt, Date.now() - CALL_TTL_MS),
+    // An accepted call is an ongoing conversation and must stay visible no
+    // matter how long it's been running; the TTL only prunes calls that
+    // rang and were never picked up. Applying it to "accepted" too used to
+    // make every call vanish from this list — and get hung up client-side —
+    // exactly CALL_TTL_MS after it was answered.
+    or(
+      and(eq(directCalls.status, "ringing"), gt(directCalls.updatedAt, Date.now() - CALL_TTL_MS)),
+      eq(directCalls.status, "accepted"),
+    ),
   )).orderBy(desc(directCalls.updatedAt)).limit(10);
   const otherIds = [...new Set(rows.map((call) =>
     call.callerId === currentUser.id ? call.calleeId : call.callerId,

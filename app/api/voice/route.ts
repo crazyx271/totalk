@@ -4,7 +4,11 @@ import { getDb } from "../../../db";
 import { users, voicePeers, voiceSignals } from "../../../db/schema";
 import { areFriends } from "../../social";
 
-const PEER_TTL_MS = 20_000;
+// Chrome (and Electron on the same engine, unless backgroundThrottling is
+// disabled) clamps setInterval to ~once/minute once a page has been hidden
+// or unfocused for 5 minutes. A short TTL here would read that as the peer
+// leaving mid-call and tear down a perfectly healthy WebRTC connection.
+const PEER_TTL_MS = 90_000;
 const SIGNAL_TTL_MS = 120_000;
 const SIGNAL_KINDS = new Set(["offer", "answer", "ice"]);
 

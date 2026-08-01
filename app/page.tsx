@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import ToTalkApp from "./ToTalkApp";
 import { DownloadIcon, MessageIcon, UsersIcon, XIcon } from "./Icons";
 import { MonitorIcon, VideoIcon } from "./CallIcons";
+import { useIsDesktopApp } from "./useIsDesktopApp";
 
 export type ToTalkUser = {
   id: number;
@@ -29,6 +30,7 @@ export default function Home() {
   const [showAuth, setShowAuth] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isDesktop = useIsDesktopApp();
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -98,7 +100,7 @@ export default function Home() {
           <div className="landing-brand"><span>T</span><b>ToTalk</b></div>
           <nav>
             <a href="#features">Возможности</a>
-            <a href="#download">Скачать</a>
+            {!isDesktop && <a href="#download">Скачать</a>}
           </nav>
           <div className="landing-nav-actions">
             <button onClick={() => openAuth("login")}>Войти</button>
@@ -112,7 +114,7 @@ export default function Home() {
             <p>Голос, видео, текст, демонстрация экрана и стикеры — всё в одном месте, без границ и подписок.</p>
             <div className="landing-hero-actions">
               <button className="primary" onClick={() => openAuth("register")}>Начать общение</button>
-              <a href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>
+              {!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>}
             </div>
           </div>
           <div className="landing-hero-art" aria-hidden="true">
@@ -144,15 +146,17 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="landing-platforms" id="download">
-          <h2>Заходите откуда угодно</h2>
-          <p>Один аккаунт для браузера и приложения на Windows — переписка и звонки синхронизируются мгновенно.</p>
-          <div className="landing-platform-row">
-            <div className="landing-platform-card"><DownloadIcon /><b>Windows</b><small>Приложение с автообновлением</small></div>
-            <div className="landing-platform-card"><MonitorIcon /><b>Браузер</b><small>Без установки, сразу в деле</small></div>
-          </div>
-          <a className="landing-download" href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>
-        </section>
+        {!isDesktop && (
+          <section className="landing-platforms" id="download">
+            <h2>Заходите откуда угодно</h2>
+            <p>Один аккаунт для браузера и приложения на Windows — переписка и звонки синхронизируются мгновенно.</p>
+            <div className="landing-platform-row">
+              <div className="landing-platform-card"><DownloadIcon /><b>Windows</b><small>Приложение с автообновлением</small></div>
+              <div className="landing-platform-card"><MonitorIcon /><b>Браузер</b><small>Без установки, сразу в деле</small></div>
+            </div>
+            <a className="landing-download" href="/downloads/ToTalk-Setup.exe" download><DownloadIcon />Скачать для Windows</a>
+          </section>
+        )}
 
         <footer className="landing-footer">
           <div className="landing-brand"><span>T</span><b>ToTalk</b></div>

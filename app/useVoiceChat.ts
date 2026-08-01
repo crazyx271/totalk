@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getAudioInputId, getNoiseSuppression, getVideoInputId } from "./mediaPreferences";
 
 type VoiceStatus = "idle" | "joining" | "connected" | "error";
 type VoiceSignal = {
@@ -298,8 +299,14 @@ export function useVoiceChat(serverId: string) {
     }
     try {
       await loadIceConfig();
+      const preferredInput = getAudioInputId();
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: getNoiseSuppression(),
+          autoGainControl: true,
+          ...(preferredInput ? { deviceId: { ideal: preferredInput } } : {}),
+        },
         video: false,
       });
       const peerId = crypto.randomUUID();
@@ -357,8 +364,11 @@ export function useVoiceChat(serverId: string) {
     if (!streamRef.current) return;
     stopVideoTrack();
     try {
+      const preferredCamera = getVideoInputId();
       const mediaStream = source === "camera"
-        ? await navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS })
+        ? await navigator.mediaDevices.getUserMedia({
+          video: { ...CAMERA_CONSTRAINTS, ...(preferredCamera ? { deviceId: { ideal: preferredCamera } } : {}) },
+        })
         : await navigator.mediaDevices.getDisplayMedia({ video: true });
       const [track] = mediaStream.getVideoTracks();
       if (!track || !streamRef.current) return;
@@ -391,6 +401,17 @@ export function useVoiceChat(serverId: string) {
   useEffect(() => () => {
     void leave();
   }, [leave]);
+
+  // Browsers throttle setInterval heavily once a tab has been hidden for a
+  // while, which can delay the heartbeat past the server's peer TTL. Poll
+  // immediately when the tab regains visibility so presence recovers fast.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && roomRef.current) void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [poll]);
 
   return {
     room,

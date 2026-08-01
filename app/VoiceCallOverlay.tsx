@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 import type { VoiceParticipant } from "./useVoiceChat";
 import Avatar from "./Avatar";
-import { MicIcon, MicOffIcon, MonitorIcon, PhoneOffIcon, VideoIcon, VideoOffIcon } from "./CallIcons";
+import { ExpandIcon, MicIcon, MicOffIcon, MinimizeIcon, MonitorIcon, PhoneOffIcon, VideoIcon, VideoOffIcon } from "./CallIcons";
+import { applyAudioOutput } from "./mediaPreferences";
 
-type CallTileProps = {
+type Tile = {
+  key: string;
   name: string;
   avatarPath?: string | null;
   sub?: string;
@@ -14,20 +16,55 @@ type CallTileProps = {
   sharingScreen?: boolean;
 };
 
-function CallTile({ name, avatarPath, sub, stream, isLocal = false, sharingScreen = false }: CallTileProps) {
+function CallTile({ tile, focused, focusable, onToggleFocus }: {
+  tile: Tile;
+  focused: boolean;
+  focusable: boolean;
+  onToggleFocus: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hasVideo = Boolean(stream?.getVideoTracks().length);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const hasVideo = Boolean(tile.stream?.getVideoTracks().length);
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = stream;
-  }, [stream]);
+    if (!videoRef.current) return;
+    videoRef.current.srcObject = tile.stream;
+    if (!tile.isLocal) applyAudioOutput(videoRef.current);
+  }, [tile.stream, tile.isLocal]);
+
+  useEffect(() => {
+    if (!hasVideo && document.fullscreenElement === containerRef.current) void document.exitFullscreen();
+  }, [hasVideo]);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(document.fullscreenElement === containerRef.current);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  function toggleFullscreen(event: MouseEvent) {
+    event.stopPropagation();
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void containerRef.current?.requestFullscreen();
+  }
 
   return (
-    <div className={`call-tile ${hasVideo ? "has-video" : ""}`}>
-      <video ref={videoRef} autoPlay playsInline muted={isLocal} className={isLocal && !sharingScreen ? "mirrored" : ""} />
-      <Avatar name={name} avatarPath={avatarPath} className="call-tile-avatar" />
-      {sharingScreen && <span className="call-tile-badge" aria-label="Демонстрация экрана"><MonitorIcon /></span>}
-      <div className="call-tile-label"><b>{name}</b>{sub && <small>{sub}</small>}</div>
+    <div
+      ref={containerRef}
+      className={`call-tile ${hasVideo ? "has-video" : ""} ${focused ? "focused" : ""}`}
+      onClick={focusable ? onToggleFocus : undefined}
+      role={focusable ? "button" : undefined}
+    >
+      <video ref={videoRef} autoPlay playsInline muted={tile.isLocal} className={tile.isLocal && !tile.sharingScreen ? "mirrored" : ""} />
+      <Avatar name={tile.name} avatarPath={tile.avatarPath} className="call-tile-avatar" />
+      {tile.sharingScreen && <span className="call-tile-badge" aria-label="Демонстрация экрана"><MonitorIcon /></span>}
+      {hasVideo && (
+        <button type="button" className="call-tile-expand" onClick={toggleFullscreen} aria-label={isFullscreen ? "Свернуть" : "На весь экран"}>
+          {isFullscreen ? <MinimizeIcon /> : <ExpandIcon />}
+        </button>
+      )}
+      <div className="call-tile-label"><b>{tile.name}</b>{tile.sub && <small>{tile.sub}</small>}</div>
     </div>
   );
 }
@@ -73,8 +110,27 @@ export default function VoiceCallOverlay({
   onToggleScreenShare,
   onLeave,
 }: VoiceCallOverlayProps) {
-  const hasAnyVideo = cameraOn || screenSharing || [...remoteStreams.values()].some((stream) => stream.getVideoTracks().length > 0);
+  const tiles: Tile[] = [
+    { key: "self", name: selfName, avatarPath: selfAvatarPath, sub: "Вы", stream: localStream, isLocal: true, sharingScreen: screenSharing },
+    ...participants.map((participant) => ({
+      key: participant.peerId,
+      name: participant.displayName,
+      avatarPath: participant.avatarPath,
+      sub: `@${participant.username}`,
+      stream: remoteStreams.get(participant.peerId) ?? null,
+    })),
+  ];
+  const hasAnyVideo = tiles.some((tile) => Boolean(tile.stream?.getVideoTracks().length));
   const connected = participants.length > 0;
+
+  // `undefined` means "no manual choice yet — follow the local screen share
+  // automatically"; `null` means the user explicitly chose the grid view.
+  // Deriving focus this way (instead of syncing it in an effect) keeps it a
+  // pure function of props+state, and a stale key just resolves to null below.
+  const [manualFocus, setManualFocus] = useState<string | null | undefined>(undefined);
+  const focusedKey = manualFocus !== undefined ? manualFocus : (screenSharing ? "self" : null);
+  const focusedTile = tiles.find((tile) => tile.key === focusedKey) ?? null;
+  const otherTiles = tiles.filter((tile) => tile.key !== focusedKey);
 
   const [elapsed, setElapsed] = useState(0);
   const connectedAtRef = useRef<number | null>(null);
@@ -90,7 +146,9 @@ export default function VoiceCallOverlay({
   }, []);
 
   return (
-    <div className={`voice-overlay ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
+    <>
+      {hasAnyVideo && <div className="voice-overlay-backdrop" />}
+      <div className={`voice-overlay ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
       <div className="voice-overlay-header">
         <Avatar name={selfName} avatarPath={selfAvatarPath} className={`voice-pulse ${connected ? "" : "ringing"}`} />
         <div>
@@ -99,18 +157,24 @@ export default function VoiceCallOverlay({
         </div>
       </div>
       {error && <div className="voice-overlay-error">{error}</div>}
-      <div className="call-tile-grid">
-        <CallTile name={selfName} avatarPath={selfAvatarPath} sub="Вы" stream={localStream} isLocal sharingScreen={screenSharing} />
-        {participants.map((participant) => (
-          <CallTile
-            key={participant.peerId}
-            name={participant.displayName}
-            avatarPath={participant.avatarPath}
-            sub={`@${participant.username}`}
-            stream={remoteStreams.get(participant.peerId) ?? null}
-          />
-        ))}
-      </div>
+      {focusedTile ? (
+        <div className="call-tile-grid has-focus">
+          <CallTile tile={focusedTile} focused focusable onToggleFocus={() => setManualFocus(null)} />
+          {otherTiles.length > 0 && (
+            <div className="call-tile-thumbs">
+              {otherTiles.map((tile) => (
+                <CallTile key={tile.key} tile={tile} focused={false} focusable={Boolean(tile.stream?.getVideoTracks().length)} onToggleFocus={() => setManualFocus(tile.key)} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="call-tile-grid">
+          {tiles.map((tile) => (
+            <CallTile key={tile.key} tile={tile} focused={false} focusable={Boolean(tile.stream?.getVideoTracks().length)} onToggleFocus={() => setManualFocus(tile.key)} />
+          ))}
+        </div>
+      )}
       <div className="voice-overlay-controls">
         <button type="button" className={`call-control-card ${muted ? "danger" : ""}`} onClick={onToggleMute} aria-pressed={muted}>
           {muted ? <MicOffIcon /> : <MicIcon />}
@@ -129,6 +193,7 @@ export default function VoiceCallOverlay({
           <span>Завершить</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

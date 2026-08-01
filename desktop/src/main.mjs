@@ -63,7 +63,8 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       spellcheck: true,
-      devTools: false
+      devTools: false,
+      backgroundThrottling: false
     }
   });
 

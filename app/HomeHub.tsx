@@ -6,11 +6,13 @@ import VoiceCallOverlay from "./VoiceCallOverlay";
 import StickerPicker from "./StickerPicker";
 import ProfileModal from "./ProfileModal";
 import UserProfileCard from "./UserProfileCard";
+import SettingsModal from "./SettingsModal";
 import Avatar from "./Avatar";
 import { useVoiceChat } from "./useVoiceChat";
 import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./callSounds";
 import type { Sticker } from "./stickers";
-import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { useIsDesktopApp } from "./useIsDesktopApp";
 import { PhoneOffIcon } from "./CallIcons";
 
 type Friend = {
@@ -69,6 +71,8 @@ export default function HomeHub({
   const [social, setSocial] = useState<SocialData>(emptySocial);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const isDesktop = useIsDesktopApp();
   const [viewedProfile, setViewedProfile] = useState<Friend | null>(null);
   const [section, setSection] = useState<"friends" | "pending" | "add">("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
@@ -318,9 +322,11 @@ export default function HomeHub({
             <Avatar name={user.displayName} avatarPath={user.avatarPath} className="avatar self"><i /></Avatar>
             <span><b>{user.displayName}</b><small>@{user.username}</small></span>
           </button>
-          <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>
+          {!isDesktop && <a href="/downloads/ToTalk-Setup.exe" download aria-label="Скачать для Windows"><DownloadIcon /></a>}
+          <button onClick={() => setShowSettings(true)} aria-label="Настройки"><SettingsIcon /></button>
           <button onClick={() => void onLogout()} aria-label="Выйти"><LogOutIcon /></button>
         </div>
+        {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       </aside>
       {mobileNavOpen && <button className="scrim" onClick={() => setMobileNavOpen(false)} aria-label="Закрыть список" />}
       {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onSaved={onUpdateUser} />}
