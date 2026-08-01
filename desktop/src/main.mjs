@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, session, shell } from "electron";
+import { app, BrowserWindow, Menu, Tray, session, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,9 +10,16 @@ const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOTALK_URL = process.env.TOTALK_URL?.trim() || "https://totalker.ru/";
 const TOTALK_ORIGIN = new URL(TOTALK_URL).origin;
+const ICON_PATH = path.join(__dirname, "..", "assets", "icon.png");
 
 app.setName("ToTalk");
 app.setAppUserModelId("com.totalk.desktop");
+
+// Closing the window minimizes to the tray instead of quitting, so an
+// active call or new-message polling keeps running in the background —
+// only the tray menu's "Выйти" (or Cmd/Ctrl+Q) actually exits the app.
+let isQuitting = false;
+let tray = null;
 
 function createMenu() {
   const template = [
@@ -57,7 +64,7 @@ function createWindow() {
     backgroundColor: "#111216",
     show: false,
     autoHideMenuBar: process.platform !== "darwin",
-    icon: path.join(__dirname, "..", "assets", "icon.png"),
+    icon: ICON_PATH,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -69,6 +76,12 @@ function createWindow() {
   });
 
   window.once("ready-to-show", () => window.show());
+
+  window.on("close", (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    window.hide();
+  });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (new URL(url).origin === TOTALK_ORIGIN) {
@@ -96,6 +109,30 @@ function createWindow() {
   return window;
 }
 
+function showMainWindow() {
+  const [window] = BrowserWindow.getAllWindows();
+  if (!window) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+}
+
+function createTray() {
+  tray = new Tray(ICON_PATH);
+  tray.setToolTip("ToTalk");
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: "Открыть ToTalk", click: showMainWindow },
+    { type: "separator" },
+    {
+      label: "Выйти", click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]));
+  tray.on("click", showMainWindow);
+}
+
 app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
     return permission === "media" && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
@@ -106,15 +143,21 @@ app.whenReady().then(() => {
   });
   createMenu();
   createWindow();
+  createTray();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else showMainWindow();
   });
 
   if (app.isPackaged) {
     autoUpdater.checkForUpdatesAndNotify();
     setInterval(() => autoUpdater.checkForUpdatesAndNotify(), UPDATE_CHECK_INTERVAL_MS);
   }
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
 });
 
 app.on("window-all-closed", () => {

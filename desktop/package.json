@@ -1,6 +1,6 @@
 {
   "name": "totalk-desktop",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "ToTalk desktop client for Windows and macOS",
   "type": "module",
   "main": "src/main.mjs",
