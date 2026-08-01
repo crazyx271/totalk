@@ -295,7 +295,11 @@ export default function HomeHub({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "accept", callId: call.id }),
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      setIncomingCall(null);
+      setNotice("Звонок уже недоступен — собеседник мог отменить его");
+      return;
+    }
     setIncomingCall(null);
     setActiveCall({ ...call, status: "accepted" });
     setSelectedFriend(call.person);

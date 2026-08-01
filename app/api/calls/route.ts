@@ -86,13 +86,32 @@ export async function POST(request: Request) {
       return Response.json({ error: "Звонить можно только друзьям" }, { status: 403 });
     }
     const now = Date.now();
-    await db.update(directCalls).set({ status: "ended", updatedAt: now }).where(and(
+    const [existing] = await db.select().from(directCalls).where(and(
       or(
         and(eq(directCalls.callerId, currentUser.id), eq(directCalls.calleeId, friendId)),
         and(eq(directCalls.callerId, friendId), eq(directCalls.calleeId, currentUser.id)),
       ),
       or(eq(directCalls.status, "ringing"), eq(directCalls.status, "accepted")),
-    ));
+    )).limit(1);
+
+    // Already talking — pressing the call button again shouldn't tear down
+    // a live conversation and start a new one.
+    if (existing?.status === "accepted") {
+      return Response.json({ call: existing });
+    }
+    // The friend is already ringing us: two people calling each other at
+    // the same time used to race (each "start" ended the other's ringing
+    // call before it could ever be accepted), so nobody's call ever showed
+    // as answered even after a real conversation. Treat this as answering
+    // their call instead of starting a competing one.
+    if (existing?.status === "ringing" && existing.callerId === friendId) {
+      await db.update(directCalls).set({ status: "accepted", acceptedAt: now, updatedAt: now }).where(eq(directCalls.id, existing.id));
+      return Response.json({ call: { ...existing, status: "accepted", acceptedAt: now } });
+    }
+
+    if (existing) {
+      await db.update(directCalls).set({ status: "ended", updatedAt: now }).where(eq(directCalls.id, existing.id));
+    }
     const [call] = await db.insert(directCalls).values({
       callerId: currentUser.id,
       calleeId: friendId,
