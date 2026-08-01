@@ -12,6 +12,7 @@ import type { CommunityServer, DirectCall, Friend } from "./callTypes";
 import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PaperclipIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { PhoneOffIcon } from "./CallIcons";
+import { serverHueClass } from "./serverHue";
 
 type DirectMessage = {
   id: number;
@@ -294,7 +295,7 @@ export default function HomeHub({
       <nav className="server-rail" aria-label="Навигация">
         <button className="brand-mark active" aria-label="Главная">T</button>
         <span className="rail-divider" />
-        {servers.map((server) => <button key={server.id} className="server-icon" onClick={() => onOpenServer(server)} aria-label={`Открыть группу ${server.name}`} title={server.name}>{server.name.trim().charAt(0).toUpperCase()}</button>)}
+        {servers.map((server) => <button key={server.id} className={`server-icon ${serverHueClass(server.id)}`} onClick={() => onOpenServer(server)} aria-label={`Открыть группу ${server.name}`} title={server.name}>{server.name.trim().charAt(0).toUpperCase()}</button>)}
         <button className="server-icon add" onClick={onCreateServer} aria-label="Создать группу" title="Создать группу"><PlusIcon /></button>
       </nav>
 

@@ -16,6 +16,7 @@ import { DownloadIcon, LogOutIcon, MenuIcon, PaperclipIcon, PhoneIcon, PlusIcon,
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { MicIcon, MicOffIcon, PhoneOffIcon } from "./CallIcons";
 import { enableBrowserNotifications, showToTalkNotification } from "./notifications";
+import { serverHueClass } from "./serverHue";
 
 type Message = {
   id: number;
@@ -543,7 +544,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         <nav className="server-rail" aria-label="Серверы">
           <button className="server-icon home-shortcut" onClick={() => setHomeMode(true)} aria-label="Главная">⌂</button>
           <span className="rail-divider" />
-          {servers.map((server) => <div className="server-slot" key={server.id}><button onClick={() => openWorkspace(server)} className={`server-icon ${server.id === activeServerId ? "active" : ""}`} aria-label={`Открыть группу ${server.name}`} aria-pressed={server.id === activeServerId}>{server.name.trim().charAt(0).toUpperCase()}</button></div>)}
+          {servers.map((server) => <div className="server-slot" key={server.id}><button onClick={() => openWorkspace(server)} className={`server-icon ${serverHueClass(server.id)} ${server.id === activeServerId ? "active" : ""}`} aria-label={`Открыть группу ${server.name}`} aria-pressed={server.id === activeServerId}>{server.name.trim().charAt(0).toUpperCase()}</button></div>)}
           <button className="server-icon add" onClick={() => { setServerError(""); setShowCreateServer(true); }} aria-label="Создать группу"><PlusIcon /></button>
         </nav>
 

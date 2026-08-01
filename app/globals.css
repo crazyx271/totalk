@@ -35,7 +35,14 @@ button svg{width:16px;height:16px;flex:none;display:block}
 .brand-mark.active,.server-icon.active{border-radius:12px;box-shadow:0 0 0 2px #ffffff18}
 .brand-mark { background:linear-gradient(145deg,#9688ff,#6958df); font-size:22px; box-shadow:0 8px 24px #6d5ce841; }
 .brand-mark:hover,.server-icon:hover { border-radius:12px; transform:translateY(-1px); }
-.server-icon { font-size:13px; letter-spacing:.04em; }.server-icon.violet{background:#403566}.server-icon.coral{background:#6b393f}.server-icon.blue{background:#2f506d}.server-icon.add{color:#72dfb1;font-size:26px;background:#25272d}.server-icon.add:hover{background:#32a875;color:white}
+.server-icon { font-size:13px; letter-spacing:.04em; color:#fff; }
+.server-icon.hue-0{background:linear-gradient(145deg,#6555bd,#3f8f96)}
+.server-icon.hue-1{background:linear-gradient(145deg,#c15f82,#5b3c66)}
+.server-icon.hue-2{background:linear-gradient(145deg,#4f9c99,#2f6f6d)}
+.server-icon.hue-3{background:linear-gradient(145deg,#e0a458,#a9622f)}
+.server-icon.hue-4{background:linear-gradient(145deg,#6b8fd6,#3d5a94)}
+.server-icon.hue-5{background:linear-gradient(145deg,#9688ff,#6958df)}
+.server-icon.add{color:#72dfb1;font-size:26px;background:#25272d}.server-icon.add:hover{background:#32a875;color:white}
 .rail-divider { height:1px; width:32px; background:#2b2c34; }
 .channel-panel { min-width:0; background:var(--panel); display:flex; flex-direction:column; border-radius:18px 0 0 0; overflow:hidden; z-index:4; }
 .workspace-title { height:64px; flex:none; padding:0 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #101115; box-shadow:0 2px 8px #0002; }
