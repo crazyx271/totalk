@@ -18,6 +18,10 @@ export function downloadsDir() {
   return join(dirname(databasePath()), "downloads");
 }
 
+export function messageFilesDir() {
+  return join(dirname(databasePath()), "message-files");
+}
+
 export function getDb() {
   if (db) return db;
 

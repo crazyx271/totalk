@@ -24,6 +24,9 @@ export async function GET(request: Request) {
       avatarPath: users.avatarPath,
       text: directMessages.content,
       kind: directMessages.kind,
+      fileName: directMessages.fileName,
+      fileMime: directMessages.fileMime,
+      fileSize: directMessages.fileSize,
       createdAt: directMessages.createdAt,
     })
     .from(directMessages)

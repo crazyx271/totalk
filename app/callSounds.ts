@@ -19,19 +19,52 @@ function beep(ctx: AudioContext, freq: number, start: number, duration: number, 
   oscillator.stop(start + duration + 0.02);
 }
 
+function softNote(ctx: AudioContext, freq: number, start: number, duration: number, gain = 0.1) {
+  const primary = ctx.createOscillator();
+  const shimmer = ctx.createOscillator();
+  const filter = ctx.createBiquadFilter();
+  const envelope = ctx.createGain();
+  primary.type = "sine";
+  shimmer.type = "triangle";
+  primary.frequency.setValueAtTime(freq, start);
+  shimmer.frequency.setValueAtTime(freq * 2, start);
+  filter.type = "lowpass";
+  filter.frequency.value = 1800;
+  envelope.gain.setValueAtTime(0.0001, start);
+  envelope.gain.exponentialRampToValueAtTime(gain, start + 0.035);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  primary.connect(filter);
+  shimmer.connect(filter);
+  filter.connect(envelope).connect(ctx.destination);
+  primary.start(start); shimmer.start(start);
+  primary.stop(start + duration + 0.02); shimmer.stop(start + duration + 0.02);
+}
+
 export function startRingtone() {
   stopRingtone();
   try {
     const ctx = getContext();
     const playPattern = () => {
       const now = ctx.currentTime;
-      beep(ctx, 740, now, 0.28);
-      beep(ctx, 740, now + 0.35, 0.28);
+      softNote(ctx, 523.25, now, 0.32, 0.09);
+      softNote(ctx, 659.25, now + 0.22, 0.34, 0.095);
+      softNote(ctx, 783.99, now + 0.46, 0.42, 0.085);
     };
     playPattern();
-    ringtoneTimer = window.setInterval(playPattern, 1800);
+    ringtoneTimer = window.setInterval(playPattern, 2400);
   } catch {
     // Autoplay/audio restrictions — ringing still shows visually.
+  }
+}
+
+export function playNotificationTone() {
+  try {
+    const ctx = getContext();
+    const now = ctx.currentTime;
+    softNote(ctx, 659.25, now, 0.18, 0.07);
+    softNote(ctx, 987.77, now + 0.1, 0.28, 0.06);
+  } catch {
+    // Visual/native notification still works if audio is unavailable.
   }
 }
 

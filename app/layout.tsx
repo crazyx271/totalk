@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ToTalk",
     description: "Общение без границ",
-    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "ToTalk — общение без границ" }],
+    images: [{ url: "/og-v2.png", width: 1733, height: 909, alt: "ToTalk — сообщения, файлы и видеозвонки" }],
   },
-  twitter: { card: "summary_large_image", images: ["/og.png"] },
+  twitter: { card: "summary_large_image", images: ["/og-v2.png"] },
   icons: { icon: "/favicon.svg" },
 };
 

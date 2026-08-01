@@ -35,6 +35,10 @@ export const messages = sqliteTable("messages", {
   channel: text("channel").notNull(),
   content: text("content").notNull(),
   kind: text("kind").notNull().default("text"),
+  fileName: text("file_name"),
+  fileStoredName: text("file_stored_name"),
+  fileMime: text("file_mime"),
+  fileSize: integer("file_size"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   index("messages_room_created_idx").on(table.serverId, table.channel, table.createdAt),
@@ -83,6 +87,10 @@ export const directMessages = sqliteTable("direct_messages", {
   recipientId: integer("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   kind: text("kind").notNull().default("text"),
+  fileName: text("file_name"),
+  fileStoredName: text("file_stored_name"),
+  fileMime: text("file_mime"),
+  fileSize: integer("file_size"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   index("direct_messages_sender_recipient_idx").on(table.senderId, table.recipientId, table.createdAt),

@@ -12,9 +12,10 @@ import { playConnectTone, playEndTone, startRingtone, stopRingtone } from "./cal
 import type { Sticker } from "./stickers";
 import type { ToTalkUser } from "./page";
 import type { DirectCall, Friend } from "./callTypes";
-import { DownloadIcon, LogOutIcon, MenuIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon } from "./Icons";
+import { DownloadIcon, LogOutIcon, MenuIcon, PaperclipIcon, PhoneIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { MicIcon, MicOffIcon, PhoneOffIcon } from "./CallIcons";
+import { enableBrowserNotifications, showToTalkNotification } from "./notifications";
 
 type Message = {
   id: number;
@@ -26,6 +27,9 @@ type Message = {
   time: string;
   text: string;
   kind: string;
+  fileName?: string | null;
+  fileMime?: string | null;
+  fileSize?: number | null;
   mine?: boolean;
 };
 
@@ -50,6 +54,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   const [channel, setChannel] = useState(workspace.channels[0]);
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const channelFileRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState("");
   const [connection, setConnection] = useState<"loading" | "online" | "error">("loading");
   const [sending, setSending] = useState(false);
@@ -74,8 +79,39 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
   const [incomingCall, setIncomingCall] = useState<DirectCall | null>(null);
   const [activeCall, setActiveCall] = useState<DirectCall | null>(null);
   const [focusFriendId, setFocusFriendId] = useState<number | null>(null);
+  const [selectedDmFriendId, setSelectedDmFriendId] = useState<number | null>(null);
+  const notificationCursorRef = useRef<number | null>(null);
   const leaveDmVoice = dmVoice.leave;
   const dmVoiceRoom = dmVoice.room;
+
+  useEffect(() => {
+    const enable = () => { void enableBrowserNotifications(); };
+    window.addEventListener("pointerdown", enable, { once: true });
+    return () => window.removeEventListener("pointerdown", enable);
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const poll = async () => {
+      try {
+        const after = notificationCursorRef.current;
+        const response = await fetch(`/api/notifications${after ? `?after=${after}` : ""}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { cursor: number; items: Array<{ id: number; senderId: number; author: string; text: string; kind: string }> };
+        if (disposed) return;
+        notificationCursorRef.current = data.cursor;
+        for (const item of data.items) {
+          const body = item.kind === "sticker" ? `Стикер ${item.text}` : item.kind === "file" ? `Файл: ${item.text}` : item.text;
+          void showToTalkNotification(item.author, body, () => { setHomeMode(true); setFocusFriendId(item.senderId); });
+        }
+      } catch {
+        // The next polling cycle will retry.
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2200);
+    return () => { disposed = true; window.clearInterval(timer); };
+  }, []);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -83,7 +119,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
       const response = await fetch(`/api/messages?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("messages unavailable");
       const data = await response.json() as {
-        messages: Array<{ id: number; userId: number; author: string; username: string; avatarPath: string | null; text: string; kind: string; createdAt: string }>;
+        messages: Array<{ id: number; userId: number; author: string; username: string; avatarPath: string | null; text: string; kind: string; fileName: string | null; fileMime: string | null; fileSize: number | null; createdAt: string }>;
       };
       setMessages(data.messages.map((message) => ({
         id: message.id,
@@ -95,6 +131,9 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         time: new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }).format(new Date(`${message.createdAt}Z`)),
         text: message.text,
         kind: message.kind,
+        fileName: message.fileName,
+        fileMime: message.fileMime,
+        fileSize: message.fileSize,
         mine: message.userId === user.id,
       })));
       setConnection("online");
@@ -278,7 +317,48 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
     }
   }
 
-  const callToastAndOverlay = (
+  async function sendChannelFile(file: File) {
+    if (sending) return;
+    setSending(true);
+    const form = new FormData();
+    form.append("scope", "channel");
+    form.append("serverId", workspace.id);
+    form.append("channel", channel);
+    form.append("file", file);
+    try {
+      const response = await fetch("/api/files", { method: "POST", body: form });
+      if (!response.ok) throw new Error("upload failed");
+      await loadMessages();
+    } catch {
+      setConnection("error");
+    } finally {
+      setSending(false);
+      if (channelFileRef.current) channelFileRef.current.value = "";
+    }
+  }
+
+  const dmCallView = activeCall ? (
+    <VoiceCallOverlay
+      variant="embedded"
+      title={activeCall.person.displayName}
+      subtitle={activeCall.status === "ringing" ? "Звоним…" : dmVoice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
+      error={dmVoice.error}
+      selfName={user.displayName}
+      selfAvatarPath={user.avatarPath}
+      participants={dmVoice.participants}
+      localStream={dmVoice.localStream}
+      remoteStreams={dmVoice.remoteStreams}
+      cameraOn={dmVoice.cameraOn}
+      screenSharing={dmVoice.screenSharing}
+      muted={dmVoice.muted}
+      onToggleMute={dmVoice.toggleMute}
+      onToggleCamera={dmVoice.toggleCamera}
+      onToggleScreenShare={dmVoice.toggleScreenShare}
+      onLeave={() => void finishCall(activeCall, "end")}
+    />
+  ) : null;
+
+  const callToastAndDock = (
     <>
       {incomingCall && <div className="call-toast">
         <Avatar name={incomingCall.person.displayName} avatarPath={incomingCall.person.avatarPath} className="friend-avatar" />
@@ -286,25 +366,14 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
         <button className="accept-call" onClick={() => void acceptCall(incomingCall)} aria-label="Принять звонок"><PhoneIcon /></button>
         <button className="decline-call" onClick={() => void finishCall(incomingCall, "decline")} aria-label="Отклонить звонок"><PhoneOffIcon /></button>
       </div>}
-      {activeCall && (
-        <VoiceCallOverlay
-          title={activeCall.person.displayName}
-          subtitle={activeCall.status === "ringing" ? "Звоним…" : dmVoice.participantCount > 1 ? "Голосовая связь установлена" : "Подключение…"}
-          error={dmVoice.error}
-          selfName={user.displayName}
-          selfAvatarPath={user.avatarPath}
-          participants={dmVoice.participants}
-          localStream={dmVoice.localStream}
-          remoteStreams={dmVoice.remoteStreams}
-          cameraOn={dmVoice.cameraOn}
-          screenSharing={dmVoice.screenSharing}
-          muted={dmVoice.muted}
-          onToggleMute={dmVoice.toggleMute}
-          onToggleCamera={dmVoice.toggleCamera}
-          onToggleScreenShare={dmVoice.toggleScreenShare}
-          onLeave={() => void finishCall(activeCall, "end")}
-        />
-      )}
+      {activeCall && (!homeMode || selectedDmFriendId !== activeCall.person.id) && <div className="compact-call-dock">
+        <button type="button" className="compact-call-main" onClick={() => { setHomeMode(true); setFocusFriendId(activeCall.person.id); }}>
+          <Avatar name={activeCall.person.displayName} avatarPath={activeCall.person.avatarPath} className="friend-avatar small" />
+          <span><small>ТЕКУЩИЙ ЗВОНОК</small><b>{activeCall.person.displayName}</b></span>
+        </button>
+        <button type="button" onClick={dmVoice.toggleMute} aria-label={dmVoice.muted ? "Включить микрофон" : "Выключить микрофон"}>{dmVoice.muted ? <MicOffIcon /> : <MicIcon />}</button>
+        <button type="button" className="danger" onClick={() => void finishCall(activeCall, "end")} aria-label="Завершить звонок"><PhoneOffIcon /></button>
+      </div>}
     </>
   );
 
@@ -320,8 +389,10 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           onStartCall={startCall}
           focusFriendId={focusFriendId}
           onFocusHandled={() => setFocusFriendId(null)}
+          onConversationChange={setSelectedDmFriendId}
+          callPanel={activeCall && selectedDmFriendId === activeCall.person.id ? dmCallView : undefined}
         />
-        {callToastAndOverlay}
+        {callToastAndDock}
       </>
     );
   }
@@ -390,13 +461,16 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
                 <Avatar name={message.author} avatarPath={message.avatarPath} className={`avatar avatar-${message.avatar.charCodeAt(0) % 4}`} />
                 <div>
                   <div className="message-meta"><b>{message.author}</b><time>{message.time}</time></div>
-                  {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : <p>{message.text}</p>}
+                  {message.kind === "sticker" ? <span className="sticker-bubble">{message.text}</span> : message.kind === "file" ? (
+                    <a className="file-card" href={`/api/files/channel/${message.id}`} download><span><PaperclipIcon /></span><div><b>{message.fileName ?? message.text}</b><small>{message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon /></a>
+                  ) : <p>{message.text}</p>}
                 </div>
               </article>
             ))}
           </div>
           <form className="composer" onSubmit={sendMessage}>
-            <button type="button" aria-label="Добавить"><PlusIcon /></button>
+            <input ref={channelFileRef} className="visually-hidden" type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void sendChannelFile(file); }} />
+            <button type="button" onClick={() => channelFileRef.current?.click()} aria-label="Отправить файл"><PaperclipIcon /></button>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Написать #${channel}`} aria-label="Сообщение" />
             <div className="sticker-anchor">
               <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>
@@ -431,7 +505,7 @@ export default function ToTalkApp({ user, onLogout, onUpdateUser }: ToTalkAppPro
           />
         )}
       </main>
-      {callToastAndOverlay}
+      {callToastAndDock}
     </>
   );
 }

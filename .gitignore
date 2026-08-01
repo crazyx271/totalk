@@ -47,4 +47,6 @@ next-env.d.ts
 # local sqlite database and uploaded user content
 /data/*.sqlite*
 /data/avatars/
+/data/message-files/
+/data/downloads/
 !/data/.gitkeep

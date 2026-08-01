@@ -27,6 +27,9 @@ export async function GET(request: Request) {
       avatarPath: users.avatarPath,
       text: messages.content,
       kind: messages.kind,
+      fileName: messages.fileName,
+      fileMime: messages.fileMime,
+      fileSize: messages.fileSize,
       createdAt: messages.createdAt,
     })
     .from(messages)

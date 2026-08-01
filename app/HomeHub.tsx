@@ -9,7 +9,7 @@ import SettingsModal from "./SettingsModal";
 import Avatar from "./Avatar";
 import type { Sticker } from "./stickers";
 import type { DirectCall, Friend } from "./callTypes";
-import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
+import { CheckIcon, ChevronLeftIcon, DownloadIcon, LogOutIcon, MenuIcon, MessageIcon, PaperclipIcon, PhoneIcon, PlusIcon, SearchIcon, SendIcon, SettingsIcon, SmileIcon, UsersIcon, XIcon } from "./Icons";
 import { useIsDesktopApp } from "./useIsDesktopApp";
 import { PhoneOffIcon } from "./CallIcons";
 
@@ -22,6 +22,9 @@ type DirectMessage = {
   avatarPath: string | null;
   text: string;
   kind: string;
+  fileName: string | null;
+  fileMime: string | null;
+  fileSize: number | null;
   createdAt: string;
 };
 
@@ -65,6 +68,8 @@ export default function HomeHub({
   onStartCall,
   focusFriendId,
   onFocusHandled,
+  onConversationChange,
+  callPanel,
 }: {
   user: ToTalkUser;
   onOpenServer: () => void;
@@ -74,6 +79,8 @@ export default function HomeHub({
   onStartCall: (friend: Friend) => Promise<string | null>;
   focusFriendId: number | null;
   onFocusHandled: () => void;
+  onConversationChange: (friendId: number | null) => void;
+  callPanel?: ReactNode;
 }) {
   const [social, setSocial] = useState<SocialData>(emptySocial);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -91,7 +98,11 @@ export default function HomeHub({
   const [showStickers, setShowStickers] = useState(false);
   const [notice, setNotice] = useState("");
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const time = useMemo(() => new Intl.DateTimeFormat("ru", { hour: "2-digit", minute: "2-digit" }), []);
+
+  useEffect(() => onConversationChange(selectedFriend?.id ?? null), [selectedFriend?.id, onConversationChange]);
 
   const timeline = useMemo(() => {
     const messageItems = messages.map((message) => ({
@@ -233,6 +244,27 @@ export default function HomeHub({
     await loadMessages();
   }
 
+  async function sendFile(file: File) {
+    if (!selectedFriend || uploadingFile) return;
+    setUploadingFile(true);
+    setNotice("");
+    const form = new FormData();
+    form.append("scope", "dm");
+    form.append("friendId", String(selectedFriend.id));
+    form.append("file", file);
+    try {
+      const response = await fetch("/api/files", { method: "POST", body: form });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Не удалось отправить файл");
+      await loadMessages();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Не удалось отправить файл");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   async function startCall(friend: Friend) {
     const error = await onStartCall(friend);
     if (error) setNotice(error);
@@ -326,6 +358,7 @@ export default function HomeHub({
               </button>
               <button className="call-button" onClick={() => void startCall(selectedFriend)} disabled={Boolean(activeCall)}><PhoneIcon /><span>Позвонить</span></button>
             </header>
+            {callPanel}
             <div className="dm-messages" ref={messagesRef}>
               {timeline.length === 0 && <div className="dm-intro"><Avatar name={selectedFriend.displayName} avatarPath={selectedFriend.avatarPath} className="friend-avatar large" /><h2>{selectedFriend.displayName}</h2><p>Это начало вашей личной переписки с @{selectedFriend.username}.</p></div>}
               {timeline.map((item) => item.type === "message" ? (
@@ -333,7 +366,11 @@ export default function HomeHub({
                   <Avatar name={item.message.author} avatarPath={item.message.avatarPath} className="friend-avatar small" />
                   <div>
                     <b>{item.message.author}</b><time>{time.format(new Date(`${item.message.createdAt}Z`))}</time>
-                    {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : <p>{item.message.text}</p>}
+                    {item.message.kind === "sticker" ? <span className="sticker-bubble">{item.message.text}</span> : item.message.kind === "file" ? (
+                      <a className="file-card" href={`/api/files/dm/${item.message.id}`} download>
+                        <span><PaperclipIcon /></span><div><b>{item.message.fileName ?? item.message.text}</b><small>{item.message.fileSize ? `${(item.message.fileSize / 1024 / 1024).toFixed(1)} МБ` : "Файл"}</small></div><DownloadIcon />
+                      </a>
+                    ) : <p>{item.message.text}</p>}
                   </div>
                 </article>
               ) : (
@@ -344,7 +381,10 @@ export default function HomeHub({
                 </div>
               ))}
             </div>
+            {notice && <div className="dm-notice">{notice}</div>}
             <form className="dm-composer" onSubmit={sendMessage}>
+              <input ref={fileInputRef} className="visually-hidden" type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void sendFile(file); }} />
+              <button type="button" className="attach-button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile} aria-label="Отправить файл"><PaperclipIcon /></button>
               <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Сообщение для @${selectedFriend.username}`} />
               <div className="sticker-anchor">
                 <button type="button" aria-label="Стикеры" aria-pressed={showStickers} onClick={() => setShowStickers((open) => !open)}><SmileIcon /></button>

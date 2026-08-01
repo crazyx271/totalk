@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, ipcMain, session, shell } from "electron";
+import { app, BrowserWindow, Menu, Tray, Notification, desktopCapturer, ipcMain, session, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOTALK_URL = process.env.TOTALK_URL?.trim() || "https://totalker.ru/";
 const TOTALK_ORIGIN = new URL(TOTALK_URL).origin;
 const ICON_PATH = path.join(__dirname, "..", "assets", "icon.png");
-const PRELOAD_PATH = path.join(__dirname, "preload.mjs");
+const PRELOAD_PATH = path.join(__dirname, "preload.cjs");
 
 app.setName("ToTalk");
 app.setAppUserModelId("com.totalk.desktop");
@@ -23,6 +23,18 @@ let isQuitting = false;
 let tray = null;
 let mainWindow = null;
 let splashWindow = null;
+
+// Without this, launching the app while an older/updated copy is already
+// sitting in the tray spawns a second process — its window can end up
+// stacked directly on top of the first, e.g. showing the old version's
+// native-framed window right behind the new frameless one. A second
+// launch now just focuses the existing window instead of starting a
+// competing instance.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
+app.on("second-instance", () => showMainWindow());
 
 function createMenu() {
   const template = [
@@ -173,15 +185,43 @@ ipcMain.on("window:toggle-maximize", () => {
 });
 ipcMain.on("window:close", () => mainWindow?.close());
 ipcMain.handle("window:is-maximized", () => mainWindow?.isMaximized() ?? false);
+ipcMain.handle("notification:show", (_event, payload = {}) => {
+  if (!Notification.isSupported()) return false;
+  const title = typeof payload.title === "string" ? payload.title.slice(0, 120) : "ToTalk";
+  const body = typeof payload.body === "string" ? payload.body.slice(0, 500) : "Новое сообщение";
+  const notification = new Notification({ title, body, icon: ICON_PATH, silent: true });
+  notification.on("click", showMainWindow);
+  notification.show();
+  return true;
+});
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    return permission === "media" && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
+    const allowed = new Set(["media", "fullscreen", "notifications"]);
+    try {
+      return allowed.has(permission) && new URL(requestingOrigin).origin === TOTALK_ORIGIN;
+    } catch {
+      return false;
+    }
   });
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     const sameOrigin = webContents.getURL().startsWith(TOTALK_ORIGIN);
-    callback(permission === "media" && sameOrigin);
+    callback(["media", "fullscreen", "notifications"].includes(permission) && sameOrigin);
   });
+  session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+    try {
+      if (!request.frame?.url.startsWith(TOTALK_ORIGIN)) return callback({});
+      const sources = await desktopCapturer.getSources({
+        types: ["screen", "window"],
+        thumbnailSize: { width: 320, height: 180 },
+        fetchWindowIcons: true,
+      });
+      const source = sources.find((item) => item.id.startsWith("screen:")) ?? sources[0];
+      callback(source ? { video: source } : {});
+    } catch {
+      callback({});
+    }
+  }, { useSystemPicker: true });
   createMenu();
   splashWindow = createSplashWindow();
   mainWindow = createWindow();

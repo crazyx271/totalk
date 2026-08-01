@@ -76,6 +76,7 @@ function formatDuration(totalSeconds: number) {
 }
 
 export type VoiceCallOverlayProps = {
+  variant?: "overlay" | "embedded";
   title: string;
   subtitle?: string;
   error?: string;
@@ -94,6 +95,7 @@ export type VoiceCallOverlayProps = {
 };
 
 export default function VoiceCallOverlay({
+  variant = "overlay",
   title,
   subtitle,
   error,
@@ -110,6 +112,8 @@ export default function VoiceCallOverlay({
   onToggleScreenShare,
   onLeave,
 }: VoiceCallOverlayProps) {
+  const callRef = useRef<HTMLDivElement | null>(null);
+  const [callFullscreen, setCallFullscreen] = useState(false);
   const tiles: Tile[] = [
     { key: "self", name: selfName, avatarPath: selfAvatarPath, sub: "Вы", stream: localStream, isLocal: true, sharingScreen: screenSharing },
     ...participants.map((participant) => ({
@@ -145,16 +149,25 @@ export default function VoiceCallOverlay({
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const onFullscreen = () => setCallFullscreen(document.fullscreenElement === callRef.current);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    return () => document.removeEventListener("fullscreenchange", onFullscreen);
+  }, []);
+
   return (
     <>
-      {hasAnyVideo && <div className="voice-overlay-backdrop" />}
-      <div className={`voice-overlay ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
+      {variant === "overlay" && hasAnyVideo && <div className="voice-overlay-backdrop" />}
+      <div ref={callRef} className={`voice-overlay voice-overlay-${variant} ${hasAnyVideo ? "voice-overlay-video" : ""}`}>
       <div className="voice-overlay-header">
         <Avatar name={selfName} avatarPath={selfAvatarPath} className={`voice-pulse ${connected ? "" : "ringing"}`} />
         <div>
           <b>{title}</b>
           <small>{connected ? formatDuration(elapsed) : subtitle}</small>
         </div>
+        <button type="button" className="call-stage-expand" onClick={() => document.fullscreenElement ? void document.exitFullscreen() : void callRef.current?.requestFullscreen()} aria-label={callFullscreen ? "Выйти из полноэкранного режима" : "На весь экран"}>
+          {callFullscreen ? <MinimizeIcon /> : <ExpandIcon />}
+        </button>
       </div>
       {error && <div className="voice-overlay-error">{error}</div>}
       {focusedTile ? (

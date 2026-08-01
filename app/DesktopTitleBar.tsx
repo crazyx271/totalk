@@ -11,6 +11,7 @@ declare global {
       toggleMaximizeWindow: () => void;
       closeWindow: () => void;
       isWindowMaximized: () => Promise<boolean>;
+      showNotification: (payload: { title: string; body: string }) => Promise<boolean>;
       onWindowMaximizedChange: (callback: (maximized: boolean) => void) => () => void;
     };
   }
